@@ -2,13 +2,12 @@
   "$schema": "https://json.swell.store/model.json",
   "collection": "pulls",
   "label": "Airtable edits",
-  "description": "Write-back state per Airtable table: which edits have been read and what was written to Swell",
+  "description": "One record per check that found Airtable edits: what was found and written to Swell",
   "name_pattern": "{table}",
   "fields": {
     "table": {
       "type": "string",
       "required": true,
-      "unique": true,
       "enum": [
         "products",
         "variants",
@@ -16,36 +15,45 @@
         "coupons",
         "categories"
       ],
-      "description": "App table whose Airtable edits are written back"
+      "description": "App table whose Airtable edits were read"
     },
-    "date_cursor": {
-      "type": "date",
-      "description": "Rows edited after this time are read on the next pass"
-    },
-    "offset": {
+    "status": {
       "type": "string",
-      "description": "Airtable page offset of a pass that ran out of time; the next run continues there"
+      "enum": [
+        "running",
+        "completed"
+      ],
+      "description": "running: the check continues on the next run (out of time or a retryable error); completed: done"
     },
-    "date_pass_started": {
-      "type": "date",
-      "description": "Start of the unfinished pass; becomes the cursor when the pass finishes"
-    },
-    "date_last_run": {
-      "type": "date"
-    },
-    "date_last_change": {
-      "type": "date",
-      "description": "Last time an Airtable edit was written to Swell"
+    "found": {
+      "type": "int",
+      "default": 0,
+      "description": "Records with Airtable edits found in this check"
     },
     "changed": {
       "type": "int",
       "default": 0,
-      "description": "Records updated in Swell"
+      "description": "Records updated in Swell in this check"
     },
     "failed": {
       "type": "int",
       "default": 0,
-      "description": "Edits Swell rejected"
+      "description": "Edits Swell rejected or cells that couldn't be read in this check"
+    },
+    "date_cursor": {
+      "type": "date",
+      "description": "The check reads rows edited after this time"
+    },
+    "date_pass_started": {
+      "type": "date",
+      "description": "When the check started; the next check reads edits from here (minus a short overlap)"
+    },
+    "offset": {
+      "type": "string",
+      "description": "Airtable page offset of a running check; the next run continues there, or from the first page when empty"
+    },
+    "date_completed": {
+      "type": "date"
     },
     "last_error": {
       "type": "string"

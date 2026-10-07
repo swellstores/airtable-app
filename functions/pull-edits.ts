@@ -1,5 +1,5 @@
 import { getAirtableSettings, isConfigured } from './lib/airtable';
-import { TIME_BUDGET_MS, pullTable, pullTables, type PullState } from './lib/pull';
+import { TIME_BUDGET_MS, latestPull, pullTable, pullTables } from './lib/pull';
 
 export const config: SwellConfig = {
   description: 'Write Airtable edits back to Swell',
@@ -19,27 +19,14 @@ export default async function (req: SwellRequest) {
     return;
   }
 
-  const result: any = await swell.get('/pulls', { limit: 50 });
-  const states: Record<string, PullState> = {};
-  for (const state of result?.results || []) {
-    states[state.table] = state;
-  }
-
-  // Tables that waited longest go first, so one busy table can't starve the others
-  const order = [...tables].sort((a, b) => String(states[a]?.date_last_run || '').localeCompare(String(states[b]?.date_last_run || '')));
+  // The first table changes every minute, so one busy table can't starve the others
+  const first = Math.floor(started / 60_000) % tables.length;
+  const order = [...tables.slice(first), ...tables.slice(0, first)];
 
   for (const id of order) {
-    const state = states[id];
-    if (!state) {
-      // First run for this table: only edits made from now on are written back
-      const now = new Date().toISOString();
-      await swell.post('/pulls', { table: id, date_cursor: now, date_last_run: now, changed: 0, failed: 0 });
-      continue;
-    }
     if (Date.now() >= deadline) {
       break;
     }
-    const save = await pullTable(swell, settings, id, state, deadline);
-    await swell.put(`/pulls/${state.id}`, save);
+    await pullTable(swell, settings, id, await latestPull(swell, id), deadline);
   }
 }

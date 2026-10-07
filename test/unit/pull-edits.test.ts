@@ -6,8 +6,10 @@ import { PRODUCT, SETTINGS, jsonResponse, settingsMock } from "../helpers/fixtur
 
 const PULL = { ...SETTINGS, collections: ["accounts", "products"], pull_collections: ["products", "accounts"] };
 
-function setup(settings: Record<string, any> = PULL, states: Record<string, any>[] = []) {
-  const get = vi.fn(async (url: string) => (url === "/pulls" ? { results: states } : { results: [PRODUCT] }));
+function setup(settings: Record<string, any> = PULL, latest: Record<string, any>[] = []) {
+  const get = vi.fn(async (url: string, query?: any) =>
+    url === "/pulls" ? { results: latest.filter((r) => r.table === query?.where?.table) } : { results: [PRODUCT] },
+  );
   const put = vi.fn().mockResolvedValue({});
   const post = vi.fn().mockResolvedValue({});
   const req = createMockRequest({ data: {}, swell: { settings: settingsMock(settings), get, put, post } });
@@ -23,6 +25,7 @@ describe("pull-edits", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -39,29 +42,35 @@ describe("pull-edits", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("starts each new table's cursor at the current time without reading Airtable", async () => {
-    const { req, post } = setup();
+  it("checks every table and writes nothing when Airtable has no edits", async () => {
+    const { req, get, put, post } = setup();
     await handler(req);
-    expect(post).toHaveBeenCalledTimes(2);
-    expect(post.mock.calls.map((c) => c[1].table)).toEqual(["accounts", "products"]);
-    expect(post.mock.calls[0][0]).toBe("/pulls");
-    expect(post.mock.calls[0][1]).toMatchObject({ changed: 0, failed: 0 });
-    expect(Date.parse(post.mock.calls[0][1].date_cursor)).toBeGreaterThan(Date.now() - 5000);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(get.mock.calls.filter((c) => c[0] === "/pulls").map((c) => c[1].where.table).sort()).toEqual(["accounts", "products"]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(put).not.toHaveBeenCalled();
+    expect(post).not.toHaveBeenCalled();
   });
 
-  it("pulls each table, least recently checked first, and saves its state", async () => {
-    const states = [
-      { id: "p1", table: "products", date_cursor: "2026-10-06T10:00:00.000Z", date_last_run: "2026-10-06T10:02:00.000Z" },
-      { id: "p2", table: "accounts", date_cursor: "2026-10-06T10:00:00.000Z", date_last_run: "2026-10-06T10:01:00.000Z" },
-    ];
-    const { req, put } = setup(PULL, states);
+  it("continues a table's running check", async () => {
+    const running = { id: "p1", table: "products", status: "running", date_cursor: "2026-10-06T10:00:00.000Z", date_pass_started: "2026-10-06T10:00:00.000Z", offset: "itr5" };
+    const { req, put } = setup(PULL, [running]);
     await handler(req);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(String(fetchMock.mock.calls[0][0])).toContain("/Customers?");
-    expect(String(fetchMock.mock.calls[1][0])).toContain("/Products?");
-    expect(put.mock.calls.map((c) => c[0])).toEqual(["/pulls/p2", "/pulls/p1"]);
-    expect(put.mock.calls[0][1]).toMatchObject({ offset: null, date_pass_started: null });
-    expect(put.mock.calls[0][1].date_cursor).toBeDefined();
+    const products = fetchMock.mock.calls.map((c) => decodeURIComponent(String(c[0]))).find((url) => url.includes("/Products?"));
+    expect(products).toContain("offset=itr5");
+    expect(put).toHaveBeenCalledWith("/pulls/p1", expect.objectContaining({ status: "completed" }));
+  });
+
+  it("starts with a different table each minute", async () => {
+    const firstTable = async (minute: number) => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(minute * 60_000);
+      fetchMock.mockClear();
+      await handler(setup().req);
+      vi.useRealTimers();
+      return String(fetchMock.mock.calls[0][0]);
+    };
+    expect(await firstTable(0)).toContain("/Customers?");
+    expect(await firstTable(1)).toContain("/Products?");
+    expect(await firstTable(2)).toContain("/Customers?");
   });
 });

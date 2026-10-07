@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { STOCK, TABLES, editableColumns, throttle } from "../../functions/lib/airtable";
 import {
+  LOOKBACK_MS,
   OVERLAP_MS,
+  checkCursor,
+  latestPull,
   applyDiff,
   cellValue,
   diffRow,
@@ -175,93 +178,165 @@ describe("listEditedRows", () => {
   });
 });
 
+describe("checkCursor", () => {
+  const NOW = Date.parse("2026-10-06T10:30:00.000Z");
+
+  it("reads the look-back window without a previous check", () => {
+    expect(checkCursor(undefined, NOW)).toBe(new Date(NOW - LOOKBACK_MS).toISOString());
+  });
+
+  it("starts at the previous check minus the overlap, however long ago it was", () => {
+    expect(checkCursor({ table: "products", date_pass_started: "2026-10-06T10:28:00.000Z" }, NOW)).toBe("2026-10-06T10:27:00.000Z");
+    expect(checkCursor({ table: "products", date_pass_started: "2026-10-01T09:00:00.000Z" }, NOW)).toBe("2026-10-01T08:59:00.000Z");
+  });
+
+  it("falls back to the creation date of older records", () => {
+    expect(checkCursor({ table: "products", date_created: "2026-10-06T10:29:00.000Z" }, NOW)).toBe("2026-10-06T10:28:00.000Z");
+  });
+});
+
 describe("pullTable", () => {
   beforeEach(() => {
     throttle.ms = 0;
   });
   afterEach(() => vi.restoreAllMocks());
 
-  const STATE = { id: "pull_1", table: "products", date_cursor: CURSOR, changed: 2, failed: 0 };
-  const clock = (start = Date.parse("2026-10-06T10:05:00.000Z")) => () => start;
+  const START = "2026-10-06T10:05:00.000Z";
+  const clock = (start = Date.parse(START)) => () => start;
+  const RUNNING = { id: "run_1", table: "products", status: "running" as const, date_cursor: CURSOR, date_pass_started: CURSOR, found: 2, changed: 2, failed: 0 };
 
-  it("writes edits and moves the cursor to the pass start minus the overlap", async () => {
-    pages({ records: [{ id: "rec1", fields: { ...SAME_ROW, Price: 9 } }, { id: "rec2", fields: { ...SAME_ROW, "Swell ID": "not-an-id" } }] });
-    const swell = swellMock();
-    const save = await pullTable(swell as any, PULL_SETTINGS as any, "products", STATE, Infinity, clock());
-    expect(swell.get).toHaveBeenCalledWith("/products", { where: { id: { $in: [P_ID] } }, limit: 1 });
-    expect(swell.put).toHaveBeenCalledWith(`/products/${P_ID}`, { purchase_options: { standard: { price: 9 } } });
-    expect(save).toMatchObject({
-      changed: 3,
-      date_cursor: new Date(Date.parse("2026-10-06T10:05:00.000Z") - OVERLAP_MS).toISOString(),
-      offset: null,
-      date_pass_started: null,
-      date_last_change: "2026-10-06T10:05:00.000Z",
-    });
-    expect(save).not.toHaveProperty("last_error");
+  // Swell mock whose POST /pulls creates the check record
+  function swellRun(records: Record<string, any>[] = [SWELL_PRODUCT], write: any = {}) {
+    const swell = swellMock(records, write);
+    swell.post.mockImplementation(async (url: string, body: any) => (url === "/pulls" ? { id: "run_new", ...body } : write));
+    return swell;
+  }
+  const pullsPost = (swell: ReturnType<typeof swellMock>) => swell.post.mock.calls.filter((c) => c[0] === "/pulls");
+  const pullsPut = (swell: ReturnType<typeof swellMock>) => swell.put.mock.calls.filter((c) => String(c[0]).startsWith("/pulls/"));
+
+  it("writes nothing when no row differs from Swell", async () => {
+    pages({ records: [{ id: "rec1", fields: SAME_ROW }, { id: "rec2", fields: { ...SAME_ROW, "Swell ID": "6ac4b32256c0310012a10000", Name: "X" } }] });
+    const swell = swellRun();
+    expect(await pullTable(swell as any, PULL_SETTINGS as any, "products", undefined, Infinity, clock())).toBeUndefined();
+    expect(swell.post).not.toHaveBeenCalled();
+    expect(swell.put).not.toHaveBeenCalled();
   });
 
-  it("does nothing for rows that already match Swell or were deleted there", async () => {
-    pages({ records: [{ id: "rec1", fields: SAME_ROW }, { id: "rec2", fields: { ...SAME_ROW, "Swell ID": "6ac4b32256c0310012a10000", Name: "X" } }] });
-    const swell = swellMock();
-    const save = await pullTable(swell as any, PULL_SETTINGS as any, "products", STATE, Infinity, clock());
-    expect(swell.put).not.toHaveBeenCalled();
-    expect(save).not.toHaveProperty("changed");
+  it("creates a check record when edits exist, writes them and completes it with the counts", async () => {
+    const fetchMock = pages({
+      records: [
+        { id: "rec1", fields: { ...SAME_ROW, Price: 9 } },
+        { id: "rec2", fields: { ...SAME_ROW, "Swell ID": "not-an-id" } },
+      ],
+    });
+    const swell = swellRun();
+    const run = await pullTable(swell as any, PULL_SETTINGS as any, "products", undefined, Infinity, clock());
+    expect(fetchCall(fetchMock).url).toContain(`DATETIME_PARSE('${new Date(Date.parse(START) - LOOKBACK_MS).toISOString()}')`);
+    expect(pullsPost(swell)).toEqual([
+      ["/pulls", { table: "products", status: "running", date_cursor: new Date(Date.parse(START) - LOOKBACK_MS).toISOString(), date_pass_started: START }],
+    ]);
+    expect(swell.put).toHaveBeenCalledWith(`/products/${P_ID}`, { purchase_options: { standard: { price: 9 } } });
+    expect(pullsPut(swell)).toEqual([
+      ["/pulls/run_new", { found: 1, changed: 1, failed: 0, status: "completed", offset: null, date_completed: START }],
+    ]);
+    expect(run).toMatchObject({ id: "run_new", status: "completed", found: 1, changed: 1 });
+  });
+
+  it("reads from the previous check's start minus the overlap", async () => {
+    const fetchMock = pages({ records: [] });
+    const latest = { id: "old", table: "products", status: "completed" as const, date_pass_started: "2026-10-06T10:02:00.000Z" };
+    await pullTable(swellRun() as any, PULL_SETTINGS as any, "products", latest, Infinity, clock());
+    expect(fetchCall(fetchMock).url).toContain(`DATETIME_PARSE('${new Date(Date.parse("2026-10-06T10:02:00.000Z") - OVERLAP_MS).toISOString()}')`);
   });
 
   it("follows Airtable pages", async () => {
     const fetchMock = pages({ records: [], offset: "itr2" }, { records: [] });
-    await pullTable(swellMock() as any, PULL_SETTINGS as any, "products", STATE, Infinity, clock());
+    await pullTable(swellRun() as any, PULL_SETTINGS as any, "products", undefined, Infinity, clock());
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchCall(fetchMock, 1).url).toContain("offset=itr2");
   });
 
-  it("keeps the page offset and pass start when it runs out of time", async () => {
+  it("continues a running check from its cursor and page offset, adding to its counts", async () => {
+    const fetchMock = pages({ records: [{ id: "rec1", fields: { ...SAME_ROW, Price: 9 } }] });
+    const swell = swellRun();
+    await pullTable(swell as any, PULL_SETTINGS as any, "products", { ...RUNNING, offset: "itr1" }, Infinity, clock());
+    const { url } = fetchCall(fetchMock);
+    expect(url).toContain(`DATETIME_PARSE('${CURSOR}')`);
+    expect(url).toContain("offset=itr1");
+    expect(pullsPost(swell)).toEqual([]);
+    expect(pullsPut(swell)).toEqual([["/pulls/run_1", expect.objectContaining({ found: 3, changed: 3, status: "completed" })]]);
+  });
+
+  it("saves nothing when it runs out of time before finding edits", async () => {
+    pages({ records: [], offset: "itr2" });
+    let t = 0;
+    const swell = swellRun();
+    await pullTable(swell as any, PULL_SETTINGS as any, "products", undefined, 1500, () => (t += 1000));
+    expect(swell.post).not.toHaveBeenCalled();
+    expect(swell.put).not.toHaveBeenCalled();
+  });
+
+  it("keeps a running check's page offset when it runs out of time", async () => {
     pages({ records: [{ id: "rec1", fields: { ...SAME_ROW, Price: 9 } }], offset: "itr2" });
     let t = 0;
-    const now = () => (t += 1000);
-    const swell = swellMock();
-    const save = await pullTable(swell as any, PULL_SETTINGS as any, "products", { ...STATE, offset: "itr1", date_pass_started: CURSOR }, 2500, now);
-    expect(swell.put).not.toHaveBeenCalled();
-    expect(save).toMatchObject({ offset: "itr1", date_pass_started: CURSOR });
-    expect(save).not.toHaveProperty("date_cursor");
+    const swell = swellRun();
+    await pullTable(swell as any, PULL_SETTINGS as any, "products", { ...RUNNING, offset: "itr1" }, 1500, () => (t += 1000));
+    expect(swell.put.mock.calls).toEqual([["/pulls/run_1", { found: 2, changed: 2, failed: 0, offset: "itr1" }]]);
   });
 
   it("records rejected edits and continues", async () => {
     pages({ records: [{ id: "rec1", fields: { ...SAME_ROW, Name: undefined } }] });
-    const swell = swellMock([SWELL_PRODUCT], { errors: { name: { message: "Required" } } });
-    const save = await pullTable(swell as any, PULL_SETTINGS as any, "products", STATE, Infinity, clock());
-    expect(save.failed).toBe(1);
-    expect(save.last_error).toBe(`Products ${P_ID}: Swell rejected the edit - name: Required`);
-    expect(save.date_cursor).toBeDefined();
+    const swell = swellRun([SWELL_PRODUCT], { errors: { name: { message: "Required" } } });
+    const run = await pullTable(swell as any, PULL_SETTINGS as any, "products", undefined, Infinity, clock());
+    expect(run).toMatchObject({
+      found: 1,
+      changed: 0,
+      failed: 1,
+      status: "completed",
+      last_error: `Products ${P_ID}: Swell rejected the edit - name: Required`,
+    });
   });
 
-  it("counts unreadable cells as failed", async () => {
+  it("counts unreadable cells as found and failed", async () => {
     pages({ records: [{ id: "rec1", fields: { ...SAME_ROW, Price: "x" } }] });
-    const save = await pullTable(swellMock() as any, PULL_SETTINGS as any, "products", STATE, Infinity, clock());
-    expect(save).toMatchObject({ failed: 1, last_error: `Products ${P_ID}: Price: "x" is not a valid number` });
+    const run = await pullTable(swellRun() as any, PULL_SETTINGS as any, "products", undefined, Infinity, clock());
+    expect(run).toMatchObject({ found: 1, changed: 0, failed: 1, last_error: `Products ${P_ID}: Price: "x" is not a valid number` });
   });
 
-  it("stops without moving the cursor on retryable errors", async () => {
+  it("keeps the check running on retryable errors", async () => {
     pages({ records: [{ id: "rec1", fields: { ...SAME_ROW, Price: 9 } }] });
-    const swell = swellMock();
-    swell.put.mockRejectedValue(Object.assign(new Error("The client does not have the required permissions"), { status: 403 }));
-    const save = await pullTable(swell as any, PULL_SETTINGS as any, "products", STATE, Infinity, clock());
-    expect(save).toMatchObject({ offset: null, date_pass_started: "2026-10-06T10:05:00.000Z" });
-    expect(save.last_error).toContain("required permissions");
-    expect(save).not.toHaveProperty("date_cursor");
+    const swell = swellRun();
+    swell.put.mockImplementation(async (url: string) => {
+      if (url.startsWith("/pulls/")) return {};
+      throw Object.assign(new Error("The client does not have the required permissions"), { status: 403 });
+    });
+    const run = await pullTable(swell as any, PULL_SETTINGS as any, "products", undefined, Infinity, clock());
+    expect(run).toMatchObject({ status: "running", found: 1, changed: 0, offset: null });
+    expect(run?.last_error).toContain("required permissions");
   });
 
-  it("reports Airtable errors such as missing columns", async () => {
+  it("only logs Airtable errors when no edits were found", async () => {
     pages(jsonResponse({ error: { type: "UNKNOWN_FIELD_NAME", message: 'Unknown field name: "Sale price"' } }, 422));
-    const save = await pullTable(swellMock() as any, PULL_SETTINGS as any, "products", STATE, Infinity, clock());
-    expect(save.last_error).toContain("UNKNOWN_FIELD_NAME");
-    expect(save).not.toHaveProperty("date_cursor");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const swell = swellRun();
+    expect(await pullTable(swell as any, PULL_SETTINGS as any, "products", undefined, Infinity, clock())).toBeUndefined();
+    expect(swell.post).not.toHaveBeenCalled();
+    expect(error.mock.calls[0][0]).toContain("UNKNOWN_FIELD_NAME");
   });
 
-  it("starts the pass over when Airtable's page offset expired", async () => {
+  it("starts a running check over from its first page when Airtable's page offset expired", async () => {
     pages(jsonResponse({ error: { type: "LIST_RECORDS_ITERATOR_NOT_AVAILABLE" } }, 422));
-    const save = await pullTable(swellMock() as any, PULL_SETTINGS as any, "products", { ...STATE, offset: "old", date_pass_started: CURSOR }, Infinity, clock());
-    expect(save).toMatchObject({ offset: null, date_pass_started: CURSOR });
+    const swell = swellRun();
+    const run = await pullTable(swell as any, PULL_SETTINGS as any, "products", { ...RUNNING, offset: "old" }, Infinity, clock());
+    expect(run).toMatchObject({ status: "running", offset: null });
+  });
+});
+
+describe("latestPull", () => {
+  it("reads the table's newest check", async () => {
+    const get = vi.fn().mockResolvedValue({ results: [{ id: "p1", table: "products" }] });
+    expect(await latestPull({ get } as any, "products")).toEqual({ id: "p1", table: "products" });
+    expect(get).toHaveBeenCalledWith("/pulls", { where: { table: "products" }, sort: "date_created desc", limit: 1 });
   });
 });
 

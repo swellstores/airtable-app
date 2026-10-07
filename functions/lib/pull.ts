@@ -28,18 +28,24 @@ import {
 
 // pull-edits runs every minute and has 10 s; stop starting new work after this long
 export const TIME_BUDGET_MS = 7000;
-// The next pass re-reads rows edited this long before the previous pass started, covering clock skew
+// A table's first check reads rows edited in this window; later checks read from the previous check with edits
+export const LOOKBACK_MS = 10 * 60_000;
+// Rows edited this long before the previous check started are read again, covering clock skew
 export const OVERLAP_MS = 60_000;
 export const PULL_PAGE_SIZE = 100;
 
-export interface PullState {
+// A record of `apps/airtable/pulls`: one check of a table that found edits
+export interface PullRun {
   id?: string;
   table: string;
-  date_cursor?: string | null;
-  offset?: string | null;
-  date_pass_started?: string | null;
+  status?: 'running' | 'completed';
+  found?: number;
   changed?: number;
   failed?: number;
+  date_cursor?: string | null;
+  date_pass_started?: string | null;
+  offset?: string | null;
+  date_created?: string;
   [key: string]: any;
 }
 
@@ -213,34 +219,47 @@ async function readSwellRecords(swell: SwellAPI, id: string, ids: string[]): Pro
 
 const iso = (ms: number) => new Date(ms).toISOString();
 
-// Runs (part of) a pass over one table's edited rows. Returns the fields to save on its pull state.
-// A pass that runs out of time keeps its Airtable offset and continues on the next run; when it
-// finishes, the cursor moves to the pass's start time.
+// The table's latest check with edits, if any
+export async function latestPull(swell: SwellAPI, id: string): Promise<PullRun | undefined> {
+  const result: any = await swell.get('/pulls', { where: { table: id }, sort: 'date_created desc', limit: 1 });
+  return result?.results?.[0];
+}
+
+// Where a new check starts reading: the start of the previous check with edits, or the look-back window without one
+export function checkCursor(latest: PullRun | undefined, nowMs: number): string {
+  const previous = Date.parse(latest?.date_pass_started || latest?.date_created || '');
+  return iso(Number.isNaN(previous) ? nowMs - LOOKBACK_MS : previous - OVERLAP_MS);
+}
+
+// Checks one table for Airtable edits and writes them to Swell. A pulls record is created only when the
+// check finds a row that differs from Swell; a check that finds nothing writes nothing. A running check
+// (out of time, or stopped by a retryable error) keeps its cursor and page offset and continues on the next run.
 export async function pullTable(
   swell: SwellAPI,
   settings: AirtableSettings,
   id: string,
-  state: PullState,
+  latest: PullRun | undefined,
   deadline: number,
   now: () => number = Date.now,
-): Promise<Record<string, any>> {
-  const passStart = state.date_pass_started || iso(now());
-  const cursor = state.date_cursor || passStart;
-  const save: Record<string, any> = { date_last_run: iso(now()) };
-  let offset = state.offset || undefined;
+): Promise<PullRun | undefined> {
+  const resume = latest?.status === 'running' ? latest : undefined;
+  const passStart = resume?.date_pass_started || iso(now());
+  const cursor = resume?.date_cursor || checkCursor(latest, Date.parse(passStart));
+  let run = resume;
+  let offset = resume?.offset || undefined;
+  let found = 0;
   let changed = 0;
   let failed = 0;
   let lastError: string | undefined;
+  let done = false;
 
-  const pause = () => {
-    save.offset = offset ?? null;
-    save.date_pass_started = passStart;
+  const start = async () => {
+    run ??= await swell.post('/pulls', { table: id, status: 'running', date_cursor: cursor, date_pass_started: passStart });
   };
 
   try {
     for (;;) {
       if (now() >= deadline) {
-        pause();
         break;
       }
       const page = await listEditedRows(settings, id, cursor, offset);
@@ -255,16 +274,21 @@ export async function pullTable(
           continue; // deleted in Swell
         }
         const diff = diffRow(id, record, row.fields);
+        if (!diff.invalid.length && !hasChanges(diff)) {
+          continue; // matches Swell, e.g. a row the app itself just synced
+        }
+        if (now() >= deadline) {
+          outOfTime = true; // this page is read again next run; rows already written compare equal then
+          break;
+        }
+        await start();
+        found++;
         if (diff.invalid.length) {
           failed++;
           lastError = `${TABLES[id].label} ${swellId}: ${diff.invalid.join('; ')}`;
         }
         if (!hasChanges(diff)) {
           continue;
-        }
-        if (now() >= deadline) {
-          outOfTime = true; // this page is read again next run; rows already written compare equal then
-          break;
         }
         try {
           await applyDiff(swell, id, record, diff);
@@ -278,39 +302,44 @@ export async function pullTable(
         }
       }
       if (outOfTime) {
-        pause();
         break;
       }
       if (!page.offset) {
-        save.date_cursor = iso(Date.parse(passStart) - OVERLAP_MS);
-        save.offset = null;
-        save.date_pass_started = null;
+        done = true;
         break;
       }
       offset = page.offset;
       await sleep(throttle.ms);
     }
   } catch (err) {
-    pause();
-    // Airtable page offsets expire; start the pass over from its first page
+    // Airtable page offsets expire; a running check starts over from its first page
     if (err instanceof AirtableError && err.type === 'LIST_RECORDS_ITERATOR_NOT_AVAILABLE') {
-      save.offset = null;
+      offset = undefined;
     }
     lastError = `${TABLES[id].label}: ${errorMessage(err)}`;
   }
 
-  if (changed) {
-    save.changed = (state.changed || 0) + changed;
-    save.date_last_change = iso(now());
+  if (!run) {
+    if (lastError) {
+      console.error(`Airtable: checking ${TABLES[id].label} edits failed - ${lastError}`);
+    }
+    return undefined;
   }
-  if (failed) {
-    save.failed = (state.failed || 0) + failed;
+  const save: Record<string, any> = {
+    found: (run.found || 0) + found,
+    changed: (run.changed || 0) + changed,
+    failed: (run.failed || 0) + failed,
+  };
+  if (done) {
+    Object.assign(save, { status: 'completed', offset: null, date_completed: iso(now()) });
+  } else {
+    save.offset = offset ?? null;
   }
   if (lastError) {
-    save.last_error = lastError;
-    save.date_last_error = iso(now());
+    Object.assign(save, { last_error: lastError, date_last_error: iso(now()) });
   }
-  return save;
+  await swell.put(`/pulls/${run.id}`, save);
+  return { ...run, ...save };
 }
 
 // On Swell `updated` events of tables with write-back, send only the editable columns whose Swell field
