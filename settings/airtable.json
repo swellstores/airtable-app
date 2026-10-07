@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.swell.store/setting.json",
   "label": "Airtable",
-  "description": "Sync orders, line items, customers, products, variants, subscriptions, coupons and categories to an Airtable base. Create a personal access token at airtable.com/create/tokens with scopes data.records:read, data.records:write, schema.bases:read and schema.bases:write, and give it access to your base. Then run \"Create tables & columns\" from the Actions menu of this page, and \"Backfill all synced collections\" under Airtable in the dashboard sidebar.",
+  "description": "Sync orders, line items, customers, products, variants, subscriptions, coupons and categories to an Airtable base. Create a personal access token at airtable.com/create/tokens with scopes data.records:read, data.records:write, schema.bases:read and schema.bases:write, and give it access to your base. Then run \"Create tables & columns\" from the Actions menu of this page, and \"Backfill all synced collections\" under Airtable syncs in the dashboard sidebar.",
   "actions": [
     {
       "id": "connection_test",
@@ -219,7 +219,7 @@
         },
         {
           "value": "mark",
-          "label": "Check the row's Deleted column"
+          "label": "Keep the row and tick its Deleted checkbox"
         },
         {
           "value": "keep",

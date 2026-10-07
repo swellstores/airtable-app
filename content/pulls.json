@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.swell.store/content.json",
   "collection": "pulls",
-  "label": "Airtable edits",
+  "label": "Airtable pulls",
   "description": "Each record is one check that found edits in Airtable, with what was written back to Swell",
   "fields": [
     {
@@ -101,7 +101,7 @@
     {
       "id": "list",
       "nav": {
-        "label": "Airtable edits"
+        "label": "Airtable pulls"
       },
       "actions": [
         {
@@ -152,7 +152,7 @@
     },
     {
       "id": "edit",
-      "title": "Airtable edits: {{ record.table }}",
+      "title": "Airtable pull: {{ record.table }}",
       "fields": [
         {
           "type": "field_row",

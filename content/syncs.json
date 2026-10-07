@@ -141,7 +141,7 @@
     {
       "id": "list",
       "nav": {
-        "label": "Airtable"
+        "label": "Airtable syncs"
       },
       "sort": {
         "date_created": "desc"

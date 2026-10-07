@@ -10,4 +10,4 @@ Connect a base with an Airtable personal access token and its base ID, pick the 
 - **Deletions your way.** When a record is deleted in Swell, delete its row, check its Deleted column or keep it unchanged.
 - **Runs on its own.** Rate limits and Airtable errors are retried automatically, and a connection test checks the token, base, tables and every column type.
 
-Setup takes a few minutes. In Airtable, create a personal access token with the data.records:read, data.records:write, schema.bases:read and schema.bases:write scopes and give it access to your base. Paste the token and base ID in the app settings and save. Then run Create tables & columns from the app's Actions menu, and Backfill all synced collections under Airtable in the dashboard sidebar.
+Setup takes a few minutes. In Airtable, create a personal access token with the data.records:read, data.records:write, schema.bases:read and schema.bases:write scopes and give it access to your base. Paste the token and base ID in the app settings and save. Then run Create tables & columns from the app's Actions menu, and Backfill all synced collections under Airtable syncs in the dashboard sidebar.
