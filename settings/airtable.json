@@ -6,9 +6,8 @@
     {
       "id": "access_token",
       "label": "Personal access token",
-      "type": "short_text",
+      "type": "secret",
       "required": true,
-      "placeholder": "pat...",
       "description": "From airtable.com/create/tokens. Needs data.records:read and data.records:write; add schema.bases:read and schema.bases:write to let the app check and create tables."
     },
     {

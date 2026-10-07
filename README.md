@@ -8,7 +8,7 @@ Sync is two way for the columns marked ✎ below: edits made to them in Airtable
 
 - **Two-way editing:** for products, variants, customers, coupons and categories, edits in Airtable to names, SKUs, prices, active flags, stock levels and the other ✎ columns are written to Swell. Turn it on per table in settings. A stock level edit becomes a Swell stock adjustment for the difference. Each table's write-back status (records updated, edits rejected, last error) is under **Airtable edits** in the dashboard sidebar.
 - **Live sync:** when a synced record is created or updated in Swell, the app reads the full record and upserts it into Airtable. Rows are matched on the **Swell ID** column, so updates never create duplicates.
-- **Eight tables:** Orders, Order line items, Customers, Products, Product variants, Subscriptions, Coupons and Categories. Pick the ones you want in settings. Orders, Customers and Products are on by default.
+- **Multiple tables:** Orders, Order line items, Customers, Products, Product variants, Subscriptions, Coupons and Categories. Pick the ones you want in settings. Orders, Customers and Products are on by default.
 - **Linked rows:** each order line item links to its order row, and each variant links to its product row, through Airtable linked-record columns (**Order**, **Product**). Airtable adds the reverse link column to the parent table automatically. If a variant changes before its product is in Airtable, the app adds the product row first.
 - **Line items follow their order:** when an order is created or its items change, its line-item rows are upserted, and rows for items removed from the order are deleted or flagged.
 - **Deletions:** when a record is deleted in Swell, the app deletes its Airtable row, checks its **Deleted** column, or leaves it alone, depending on the settings. Deleting an order or product does the same to its line-item or variant rows.
@@ -25,7 +25,7 @@ All credentials and options are app settings (`settings/airtable.json`). Nothing
 
 | Setting | Required | Default | Description |
 |---|---|---|---|
-| Personal access token | yes | | Airtable personal access token. Scopes: `data.records:read`, `data.records:write`. Add `schema.bases:read` for column checks and `schema.bases:write` for table setup. |
+| Personal access token | yes | | Airtable personal access token, stored as a secret setting (masked in the dashboard). Scopes: `data.records:read`, `data.records:write`. Add `schema.bases:read` for column checks and `schema.bases:write` for table setup. |
 | Base ID | yes | | Starts with `app`. The part after `airtable.com/` in the base URL. |
 | Collections to sync | no | Orders, Customers, Products | Tables that are synced live and offered by **Backfill all synced collections**. **Order line items** needs **Orders** selected, and **Product variants** needs **Products**. |
 | Orders table | no | `Orders` | Table name or table ID (`tbl…`). |
@@ -152,7 +152,6 @@ When write-back is on for a table, live Swell `updated` events send only the ✎
 - **Long text:** values longer than 100,000 characters are truncated.
 - **Duplicate Swell IDs:** if two rows have the same Swell ID (for example, a row you copied by hand), upserts for that record fail until one is removed.
 - **Deleted column:** with **Check the row's Deleted column**, rows are flagged but stay in the table.
-- **Credentials are visible:** Swell settings have no secret field type, so the token is stored as a normal setting. Use a token limited to one base and the scopes above.
 - **Permission changes take a while:** after an app's permissions change, Swell can deny some requests to collections for a long time. Sync jobs wait and retry; live updates are retried by Swell. If it persists, reinstalling the app gives it new API keys with fresh permissions.
 
 ## Development

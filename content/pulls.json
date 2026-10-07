@@ -79,8 +79,7 @@
     {
       "id": "list",
       "nav": {
-        "label": "Airtable edits",
-        "icon": "integrations"
+        "label": "Airtable edits"
       },
       "sort": {
         "table": "asc"

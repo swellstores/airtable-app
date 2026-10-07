@@ -175,8 +175,7 @@
     {
       "id": "list",
       "nav": {
-        "label": "Airtable",
-        "icon": "integrations"
+        "label": "Airtable"
       },
       "sort": {
         "date_created": "desc"
