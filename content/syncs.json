@@ -1,31 +1,9 @@
 {
   "$schema": "https://json.swell.store/content.json",
   "collection": "syncs",
-  "label": "Airtable syncs",
-  "description": "Test the Airtable connection, create tables and send existing records",
+  "label": "Airtable backfills",
+  "description": "Send existing records to Airtable",
   "fields": [
-    {
-      "id": "type",
-      "label": "Type",
-      "type": "select",
-      "required": true,
-      "default": "backfill",
-      "options": [
-        {
-          "value": "test",
-          "label": "Connection test"
-        },
-        {
-          "value": "setup",
-          "label": "Create tables & columns"
-        },
-        {
-          "value": "backfill",
-          "label": "Backfill"
-        }
-      ],
-      "description": "Connection test checks the token, base, tables and columns. Create tables & columns adds whatever is missing. Backfill sends existing records of one collection."
-    },
     {
       "id": "collection",
       "label": "Collection",
@@ -63,7 +41,8 @@
           "value": "categories",
           "label": "Categories"
         }
-      ]
+      ],
+      "required": true
     },
     {
       "id": "status",
@@ -104,13 +83,6 @@
       "description": "Optional. Leave empty to send every record."
     },
     {
-      "id": "replace_columns",
-      "label": "Replace columns with the wrong type",
-      "type": "boolean",
-      "ui": "toggle",
-      "description": "Renames columns whose type the app can't write into to \"<name> (old)\", keeping their data, and creates them again with the right type. Run a backfill afterwards to fill them."
-    },
-    {
       "id": "sent",
       "label": "Done",
       "type": "number",
@@ -132,12 +104,6 @@
       "id": "last_id",
       "label": "Last record ID",
       "type": "short_text",
-      "readonly": true
-    },
-    {
-      "id": "message",
-      "label": "Result",
-      "type": "long_text",
       "readonly": true
     },
     {
@@ -181,9 +147,6 @@
         "date_created": "desc"
       },
       "fields": [
-        {
-          "id": "type"
-        },
         {
           "id": "collection"
         },
@@ -256,38 +219,22 @@
       "id": "new",
       "fields": [
         {
-          "id": "type"
+          "id": "collection"
         },
         {
-          "id": "collection",
-          "required": true,
-          "conditions": {
-            "type": "backfill"
-          }
-        },
-        {
-          "id": "date_from",
-          "conditions": {
-            "type": "backfill"
-          }
-        },
-        {
-          "id": "replace_columns",
-          "conditions": {
-            "type": "setup"
-          }
+          "id": "date_from"
         }
       ]
     },
     {
       "id": "edit",
-      "title": "Airtable {{ record.type }} {{ record.collection }}",
+      "title": "Airtable backfill: {{ record.collection }}",
       "fields": [
         {
           "type": "field_row",
           "fields": [
             {
-              "id": "type",
+              "id": "collection",
               "readonly": true,
               "admin_span": 2
             },
@@ -301,19 +248,11 @@
           "type": "field_row",
           "fields": [
             {
-              "id": "collection",
-              "readonly": true,
-              "admin_span": 2
-            },
-            {
               "id": "date_from",
               "readonly": true,
               "admin_span": 2
             }
-          ],
-          "conditions": {
-            "type": "backfill"
-          }
+          ]
         },
         {
           "type": "field_row",
@@ -346,25 +285,7 @@
           ]
         },
         {
-          "id": "last_id",
-          "conditions": {
-            "type": "backfill"
-          }
-        },
-        {
-          "id": "message",
-          "conditions": {
-            "message": {
-              "$exists": true
-            }
-          }
-        },
-        {
-          "id": "replace_columns",
-          "readonly": true,
-          "conditions": {
-            "type": "setup"
-          }
+          "id": "last_id"
         },
         {
           "id": "last_error",

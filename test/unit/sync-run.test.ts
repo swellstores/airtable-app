@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import handler, { MAX_RETRIES, retryDelaySeconds, runBackfill, runSetup, runTest, shouldRun } from "../../functions/sync-run";
-import { AirtableError, MAX_SCHEMA_WRITES, TABLES, throttle } from "../../functions/lib/airtable";
+import handler, { MAX_RETRIES, retryDelaySeconds, runBackfill, shouldRun } from "../../functions/sync-run";
+import { AirtableError, TABLES, throttle } from "../../functions/lib/airtable";
 import { createMockRequest } from "../helpers/mock-request";
 import { ORDER, PRODUCT, SETTINGS, VARIANT, airtableFetch, fetchCall, fullTable, jsonResponse, settingsMock, table } from "../helpers/fixtures";
 
-const JOB = { id: "job_1", type: "backfill", collection: "orders", status: "pending", pages: 0, sent: 0 };
+const JOB = { id: "job_1", collection: "orders", status: "pending", pages: 0, sent: 0 };
 
 const fullTables = () => [fullTable("t1", "Orders", "orders"), fullTable("t2", "Customers", "accounts"), fullTable("t3", "Products", "products")];
 
@@ -142,61 +142,6 @@ describe("runBackfill", () => {
   });
 });
 
-describe("runTest", () => {
-  it("completes with the connection summary", async () => {
-    expect(await runTest(SETTINGS as any)).toMatchObject({ status: "completed", pages: 1, message: expect.stringContaining("Connected") });
-  });
-});
-
-describe("runSetup", () => {
-  it("reports nothing to do when every column exists", async () => {
-    const update = await runSetup(SETTINGS as any, { id: "job_1" });
-    expect(update).toMatchObject({ status: "completed", sent: 0, total: 0, message: "Every table and column already exists with the right type." });
-  });
-
-  it("creates missing tables, then link columns in the next step", async () => {
-    fetchMock.mockImplementation(airtableFetch({ tables: [] }));
-    const settings = { ...SETTINGS, collections: ["orders", "order_items"] };
-    const first = await runSetup(settings as any, { id: "job_1" });
-    expect(fetchCall(fetchMock, 1)).toMatchObject({ method: "POST", body: { name: "Orders" } });
-    expect(first).toMatchObject({ status: "running", pages: 1, sent: 2, total: 3, message: "Created table Orders, created table Order line items." });
-
-    const items = fullTable("t2", "Order line items", "order_items", "t1");
-    items.fields = items.fields.filter((f) => f.name !== "Order");
-    fetchMock.mockImplementation(airtableFetch({ tables: [fullTable("t1", "Orders", "orders"), items] }));
-    const second = await runSetup(settings as any, { id: "job_1", ...first });
-    expect(second).toMatchObject({ status: "completed", pages: 2, sent: 3, total: 3 });
-    expect(second.message).toBe("Created table Orders, created table Order line items.\nCreated column Order line items.Order.");
-  });
-
-  it("creates at most MAX_SCHEMA_WRITES columns per step and keeps running", async () => {
-    fetchMock.mockImplementation(airtableFetch({ tables: [table("t3", "Products", ["Name"])] }));
-    const update = await runSetup({ ...SETTINGS, collections: ["products"] } as any, { id: "job_1", message: "Earlier." });
-    expect(fetchMock).toHaveBeenCalledTimes(1 + MAX_SCHEMA_WRITES);
-    expect(update.status).toBe("running");
-    expect(update.sent).toBe(MAX_SCHEMA_WRITES);
-    expect(update.total).toBe(TABLES.products.columns.length - 1);
-    expect(update.message).toMatch(/^Earlier\.\nCreated column Products\.Swell ID/);
-  });
-
-  it("reports wrong column types unless asked to replace them", async () => {
-    const orders = fullTable("t1", "Orders", "orders");
-    orders.fields.find((f) => f.name === "Total")!.type = "singleLineText";
-    fetchMock.mockImplementation(airtableFetch({ tables: [orders] }));
-    const settings = { ...SETTINGS, collections: ["orders"] };
-
-    const report = await runSetup(settings as any, { id: "job_1" });
-    expect(report.status).toBe("completed");
-    expect(report.message).toContain('Not changed: Column "Orders.Total" is singleLineText, expected number');
-
-    fetchMock.mockClear();
-    const replace = await runSetup(settings as any, { id: "job_1", replace_columns: true });
-    expect(replace.message).toBe('Renamed Orders.Total to "Total (old)", created column Orders.Total.');
-    expect(fetchCall(fetchMock, 1).method).toBe("PATCH");
-    expect(fetchCall(fetchMock, 2).body).toEqual({ name: "Total", type: "number", options: { precision: 2 } });
-  });
-});
-
 describe("sync-run handler", () => {
   it("runs a backfill step and saves progress", async () => {
     const { req, put } = setup();
@@ -216,16 +161,6 @@ describe("sync-run handler", () => {
     await handler(req);
     expect(put.mock.calls[0][1].status).toBeUndefined();
     expect(put.mock.calls[0][1].sent).toBe(2);
-  });
-
-  it("runs connection tests and setup jobs", async () => {
-    const test = setup({ job: { id: "job_1", type: "test", status: "pending" } });
-    await handler(test.req);
-    expect(test.put.mock.calls[0][1]).toMatchObject({ status: "completed", message: expect.stringContaining("Connected") });
-
-    const setupJob = setup({ job: { id: "job_1", type: "setup", status: "pending" } });
-    await handler(setupJob.req);
-    expect(setupJob.put.mock.calls[0][1]).toMatchObject({ status: "completed" });
   });
 
   it("waits and schedules a retry after a rate limit", async () => {

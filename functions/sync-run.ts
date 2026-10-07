@@ -1,21 +1,14 @@
 import {
   ACTIVE_STATUSES,
-  MAX_SCHEMA_WRITES,
   TABLES,
   AirtableError,
-  applySchemaOp,
-  checkConnection,
-  describeMismatch,
-  describeOp,
   ensureParentRows,
   errorMessage,
   getAirtableSettings,
   isConfigured,
   isRetryable,
-  listTables,
   orderItemRows,
   pageSize,
-  planSchema,
   sleep,
   tableName,
   throttle,
@@ -28,7 +21,7 @@ import {
 export const MAX_RETRIES = 8;
 
 export const config: SwellConfig = {
-  description: 'Run one step of an Airtable sync job',
+  description: 'Run one step of an Airtable backfill',
   model: {
     events: ['sync.created', 'sync.updated'],
     conditions: { status: { $in: ['pending', 'running'] } },
@@ -80,18 +73,10 @@ export default async function (req: SwellRequest) {
   }
 
   try {
-    let update: Update;
-    if (job.type === 'test') {
-      update = await runTest(settings);
-    } else if (job.type === 'setup') {
-      update = await runSetup(settings, job);
-    } else {
-      update = await runBackfill(swell, settings, job);
-    }
-    await save(swell, job, update);
+    await save(swell, job, await runBackfill(swell, settings, job));
   } catch (err) {
     const message = errorMessage(err);
-    console.error(`Airtable: sync ${job.id} (${job.type} ${job.collection || ''}) failed - ${message}`);
+    console.error(`Airtable: backfill ${job.id} (${job.collection || ''}) failed - ${message}`);
 
     const retries = (job.retries || 0) + 1;
     if (!isRetryable(err) || retries > MAX_RETRIES) {
@@ -132,48 +117,6 @@ async function save(swell: SwellAPI, job: Job, update: Update) {
     }
   }
   await swell.put(`/syncs/${job.id}`, update);
-}
-
-export async function runTest(settings: AirtableSettings): Promise<Update> {
-  const message = await checkConnection(settings);
-  return { status: 'completed', message, pages: 1, last_error: null };
-}
-
-// Creates, renames or replaces up to MAX_SCHEMA_WRITES tables/columns per step; the next step re-plans and continues
-export async function runSetup(settings: AirtableSettings, job: Job): Promise<Update> {
-  const plan = planSchema(settings, await listTables(settings), job.replace_columns === true);
-  const batch = plan.ops.slice(0, MAX_SCHEMA_WRITES);
-  for (const op of batch) {
-    await sleep(throttle.ms);
-    await applySchemaOp(settings, op);
-  }
-
-  const sent = (job.sent || 0) + batch.length;
-  // Deferred link columns need another step once their parent table exists
-  const done = !batch.length || (plan.ops.length <= MAX_SCHEMA_WRITES && plan.deferred === 0);
-  const lines = job.message ? [job.message] : [];
-  if (batch.length) {
-    const text = batch.map(describeOp).join(', ');
-    lines.push(text.charAt(0).toUpperCase() + text.slice(1) + '.');
-  }
-  if (done) {
-    if (plan.mismatches.length && job.replace_columns !== true) {
-      lines.push(
-        `Not changed: ${plan.mismatches.map(describeMismatch).join('; ')}. Create another "Create tables & columns" job with "Replace columns with the wrong type" ticked to fix them.`,
-      );
-    }
-    if (!lines.length) {
-      lines.push('Every table and column already exists with the right type.');
-    }
-  }
-  return {
-    status: done ? 'completed' : 'running',
-    pages: (job.pages || 0) + 1,
-    sent,
-    total: sent - batch.length + plan.ops.length + plan.deferred,
-    message: lines.join('\n'),
-    last_error: null,
-  };
 }
 
 // Sends one page. Order line items page through orders and stop at whole orders once `limit` rows are collected.

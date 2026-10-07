@@ -103,6 +103,13 @@
       "nav": {
         "label": "Airtable edits"
       },
+      "actions": [
+        {
+          "id": "hide_actions",
+          "link": "#",
+          "hidden": true
+        }
+      ],
       "sort": {
         "date_created": "desc"
       },

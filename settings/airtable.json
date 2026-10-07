@@ -1,7 +1,35 @@
 {
   "$schema": "https://json.swell.store/setting.json",
   "label": "Airtable",
-  "description": "Sync orders, line items, customers, products, variants, subscriptions, coupons and categories to an Airtable base. Create a personal access token at airtable.com/create/tokens with scopes data.records:read, data.records:write, schema.bases:read and schema.bases:write, and give it access to your base. Then open Airtable in the dashboard sidebar and create a sync job of type \"Create tables & columns\", followed by \"Backfill all synced collections\".",
+  "description": "Sync orders, line items, customers, products, variants, subscriptions, coupons and categories to an Airtable base. Create a personal access token at airtable.com/create/tokens with scopes data.records:read, data.records:write, schema.bases:read and schema.bases:write, and give it access to your base. Then run \"Create tables & columns\" from the Actions menu of this page, and \"Backfill all synced collections\" under Airtable in the dashboard sidebar.",
+  "actions": [
+    {
+      "id": "connection_test",
+      "label": "Connection test",
+      "function": "connection-test",
+      "loading_label": "Testing the connection...",
+      "hint": "Checks the token, the base, the tables and every column and its type"
+    },
+    {
+      "id": "create_tables",
+      "label": "Create tables & columns",
+      "function": "create-tables",
+      "loading_label": "Creating tables and columns...",
+      "modal": {
+        "description": "Creates the tables of the synced collections and adds missing columns. Tables you made yourself keep their rows and extra columns.",
+        "submit_label": "Create",
+        "fields": [
+          {
+            "id": "replace_columns",
+            "label": "Replace columns with the wrong type",
+            "type": "boolean",
+            "ui": "toggle",
+            "description": "Renames columns whose type the app can't write into to \"<name> (old)\", keeping their data, and creates them again with the right type. Run a backfill afterwards to fill them."
+          }
+        ]
+      }
+    }
+  ],
   "fields": [
     {
       "id": "access_token",

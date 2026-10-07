@@ -22,12 +22,12 @@ describe("sync-all", () => {
     const { req, get, post } = setup({ data: { date_from: "2026-01-01" } });
     const result = await handler(req);
     expect(get).toHaveBeenCalledWith("/syncs", {
-      where: { type: "backfill", status: { $in: ["pending", "running", "waiting"] } },
+      where: { status: { $in: ["pending", "running", "waiting"] } },
       fields: "collection",
       limit: 100,
     });
     expect(post).toHaveBeenCalledTimes(3);
-    expect(post).toHaveBeenCalledWith("/syncs", { type: "backfill", collection: "orders", status: "pending", date_from: "2026-01-01" });
+    expect(post).toHaveBeenCalledWith("/syncs", { collection: "orders", status: "pending", date_from: "2026-01-01" });
     expect(result).toEqual({ message: "Started backfills for Orders, Customers, Products." });
   });
 
@@ -42,7 +42,7 @@ describe("sync-all", () => {
     const { req, post } = setup({ active: [{ collection: "orders" }] });
     const result = await handler(req);
     expect(post).toHaveBeenCalledTimes(2);
-    expect(post.mock.calls[0][1]).toEqual({ type: "backfill", collection: "accounts", status: "pending" });
+    expect(post.mock.calls[0][1]).toEqual({ collection: "accounts", status: "pending" });
     expect(result).toEqual({ message: "Started backfills for Customers, Products. Already running: Orders." });
   });
 

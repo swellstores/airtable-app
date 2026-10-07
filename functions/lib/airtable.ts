@@ -17,8 +17,8 @@ export const API_URL = 'https://api.airtable.com/v0';
 export const MAX_BATCH = 10;
 export const DEFAULT_PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 100;
-// Schema writes (tables, columns) per sync-run step, so a step stays well within 10 s
-export const MAX_SCHEMA_WRITES = 12;
+// "Create tables & columns" stops starting schema writes after this long, so the action stays within 10 s
+export const SETUP_BUDGET_MS = 8000;
 // Swell IDs per OR() formula when looking up parent rows
 export const MAX_LOOKUP = 50;
 
@@ -245,7 +245,7 @@ function hint(status: number, type?: string): string {
     return '. Check the base ID and table names, and that the token has access to the base and the needed scopes.';
   }
   if (type === 'UNKNOWN_FIELD_NAME' || type === 'INVALID_VALUE_FOR_COLUMN') {
-    return '. Run a "Create tables & columns" sync job to add missing columns or fix column types.';
+    return '. Run "Create tables & columns" from the Actions menu of the Airtable app to add missing columns or fix column types.';
   }
   if (status === 429) {
     return '. Airtable rate limit reached; it lifts after 30 seconds.';
@@ -585,6 +585,64 @@ export function describeOp(op: SchemaOp): string {
   return `renamed ${op.table}.${op.from} to "${op.to}"`;
 }
 
+export interface SetupResult {
+  // false when the time ran out before every table and column was created
+  done: boolean;
+  message: string;
+}
+
+// Creates missing tables and columns, and with `replace` re-creates columns of the wrong type. Plans again after
+// each round, since link columns can only be added once their parent table exists. Stops at `deadline`.
+export async function setupTables(
+  settings: AirtableSettings,
+  replace: boolean,
+  deadline: number,
+  now: () => number = Date.now,
+): Promise<SetupResult> {
+  const applied: SchemaOp[] = [];
+  const summary = (extra: string[]) => {
+    const lines: string[] = [];
+    if (applied.length) {
+      const text = applied.map(describeOp).join(', ');
+      lines.push(text.charAt(0).toUpperCase() + text.slice(1) + '.');
+    }
+    return [...lines, ...extra].join('\n');
+  };
+
+  try {
+    for (;;) {
+      const plan = planSchema(settings, await listTables(settings), replace);
+      if (!plan.ops.length) {
+        const extra: string[] = [];
+        if (plan.mismatches.length && !replace) {
+          extra.push(
+            `Not changed: ${plan.mismatches.map(describeMismatch).join('; ')}. Run "Create tables & columns" again with "Replace columns with the wrong type" turned on to fix them.`,
+          );
+        }
+        if (!applied.length && !extra.length) {
+          extra.push('Every table and column already exists with the right type.');
+        }
+        return { done: true, message: summary(extra) };
+      }
+      for (const op of plan.ops) {
+        if (now() >= deadline) {
+          return { done: false, message: summary(['Not finished yet. Run "Create tables & columns" again to create the rest.']) };
+        }
+        await sleep(throttle.ms);
+        await applySchemaOp(settings, op);
+        applied.push(op);
+      }
+      await sleep(throttle.ms);
+    }
+  } catch (err) {
+    // Keep what was done in the message, so a rerun after the fix is understood
+    if (applied.length && err instanceof Error) {
+      err.message = `${summary([])}\nThen failed: ${err.message}`;
+    }
+    throw err;
+  }
+}
+
 // Checks the token, base, tables, columns and column types. Returns a summary or throws with the problems found.
 export async function checkConnection(settings: AirtableSettings): Promise<string> {
   const ids = syncedTables(settings);
@@ -624,7 +682,7 @@ export async function checkConnection(settings: AirtableSettings): Promise<strin
   }
   if (problems.length) {
     throw new AirtableError(
-      `${problems.join('. ')}. Run a "Create tables & columns" sync job to add missing tables and columns; tick "Replace columns with the wrong type" to fix types.`,
+      `${problems.join('. ')}. Run "Create tables & columns" from the Actions menu of the Airtable app to add missing tables and columns; turn on "Replace columns with the wrong type" to fix types.`,
       422,
     );
   }

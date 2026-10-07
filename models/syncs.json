@@ -1,20 +1,10 @@
 {
   "$schema": "https://json.swell.store/model.json",
   "collection": "syncs",
-  "label": "Airtable syncs",
-  "description": "Airtable sync jobs: connection tests, table setup and backfills",
-  "name_pattern": "{type} {collection}",
+  "label": "Airtable backfills",
+  "description": "Airtable backfills: existing records of one collection sent to Airtable",
+  "name_pattern": "{collection}",
   "fields": {
-    "type": {
-      "type": "string",
-      "required": true,
-      "default": "backfill",
-      "enum": [
-        "test",
-        "setup",
-        "backfill"
-      ]
-    },
     "collection": {
       "type": "string",
       "enum": [
@@ -27,7 +17,7 @@
         "coupons",
         "categories"
       ],
-      "description": "Collection to backfill (backfill jobs only)"
+      "description": "Collection to backfill"
     },
     "status": {
       "type": "string",
@@ -45,11 +35,6 @@
       "type": "date",
       "description": "Backfill only records created on or after this date"
     },
-    "replace_columns": {
-      "type": "bool",
-      "default": false,
-      "description": "Setup jobs: rename columns with the wrong type to \"<name> (old)\" and create them again"
-    },
     "last_id": {
       "type": "string",
       "description": "ID of the last record sent; the next page starts after it"
@@ -62,15 +47,11 @@
     "sent": {
       "type": "int",
       "default": 0,
-      "description": "Records sent, or tables and columns created"
+      "description": "Records sent"
     },
     "total": {
       "type": "int",
-      "description": "Records to send, or tables and columns to create, counted on the first step"
-    },
-    "message": {
-      "type": "string",
-      "description": "Result of a connection test or table setup"
+      "description": "Records to send, counted on the first step"
     },
     "last_error": {
       "type": "string"

@@ -21,20 +21,20 @@ describe("sync-control", () => {
 
   it("cancels an active or waiting job", async () => {
     const { req, put } = setup("cancel", { id: ID, status: "waiting" });
-    expect(await handler(req)).toEqual({ message: "Sync job canceled." });
+    expect(await handler(req)).toEqual({ message: "Backfill canceled." });
     expect(put).toHaveBeenCalledWith(`/syncs/${ID}`, { status: "canceled", date_completed: expect.any(String) });
   });
 
   it("does not cancel a finished job", async () => {
     const { req, put } = setup("cancel", { id: ID, status: "completed" });
-    expect(await handler(req)).toEqual({ message: "This sync job is already completed." });
+    expect(await handler(req)).toEqual({ message: "This backfill is already completed." });
     expect(put).not.toHaveBeenCalled();
   });
 
   it("resumes failed, canceled and waiting jobs", async () => {
     for (const status of ["failed", "canceled", "waiting"]) {
       const { req, put } = setup("resume", { id: ID, status });
-      expect(await handler(req)).toEqual({ message: "Sync job resumed." });
+      expect(await handler(req)).toEqual({ message: "Backfill resumed." });
       expect(put).toHaveBeenCalledWith(`/syncs/${ID}`, { status: "pending", last_error: null, date_completed: null, retries: 0, date_retry: null });
     }
   });

@@ -19,7 +19,7 @@ export default async function (req: SwellRequest) {
   }
 
   const active: any = await swell.get('/syncs', {
-    where: { type: 'backfill', status: { $in: ACTIVE_STATUSES } },
+    where: { status: { $in: ACTIVE_STATUSES } },
     fields: 'collection',
     limit: 100,
   });
@@ -33,7 +33,6 @@ export default async function (req: SwellRequest) {
       continue;
     }
     await swell.post('/syncs', {
-      type: 'backfill',
       collection,
       status: 'pending',
       ...(data.date_from ? { date_from: data.date_from } : {}),
