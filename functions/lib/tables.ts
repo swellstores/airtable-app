@@ -32,8 +32,6 @@ export interface Column {
   value: (row: Record<string, any>, ctx: RowContext) => any;
   // Editable in Airtable: the Swell field an edit is written to (a dot path for nested fields), or STOCK for a stock adjustment
   writeTo?: string;
-  // Swell stores the field per locale; edits are also written to the store's locale, the value the dashboard shows
-  localized?: boolean;
 }
 
 export interface TableConfig {
@@ -256,7 +254,7 @@ const ACCOUNT_COLUMNS: Column[] = [
 ];
 
 const PRODUCT_COLUMNS: Column[] = [
-  { name: 'Name', type: 'singleLineText', value: (r) => text(r.name), writeTo: 'name', localized: true },
+  { name: 'Name', type: 'singleLineText', value: (r) => text(r.name), writeTo: 'name' },
   swellId,
   { name: 'SKU', type: 'singleLineText', value: (r) => text(r.sku), writeTo: 'sku' },
   { name: 'Slug', type: 'singleLineText', value: (r) => text(r.slug) },
@@ -274,7 +272,7 @@ const PRODUCT_COLUMNS: Column[] = [
 ];
 
 const VARIANT_COLUMNS: Column[] = [
-  { name: 'Name', type: 'singleLineText', value: (r) => text(r.name), writeTo: 'name', localized: true },
+  { name: 'Name', type: 'singleLineText', value: (r) => text(r.name), writeTo: 'name' },
   swellId,
   parentLink('Product'),
   { name: 'Product Swell ID', type: 'singleLineText', value: (r) => text(r.parent_id) },
@@ -316,7 +314,7 @@ const SUBSCRIPTION_COLUMNS: Column[] = [
 ];
 
 const COUPON_COLUMNS: Column[] = [
-  { name: 'Name', type: 'singleLineText', value: (r) => text(r.name), writeTo: 'name', localized: true },
+  { name: 'Name', type: 'singleLineText', value: (r) => text(r.name), writeTo: 'name' },
   swellId,
   { name: 'Code', type: 'singleLineText', value: (r) => (r.multi_codes ? null : text(r.code)) },
   { name: 'Multiple codes', type: 'checkbox', value: (r) => bool(r.multi_codes) },
@@ -334,7 +332,7 @@ const COUPON_COLUMNS: Column[] = [
 ];
 
 const CATEGORY_COLUMNS: Column[] = [
-  { name: 'Name', type: 'singleLineText', value: (r) => text(r.name), writeTo: 'name', localized: true },
+  { name: 'Name', type: 'singleLineText', value: (r) => text(r.name), writeTo: 'name' },
   swellId,
   { name: 'Slug', type: 'singleLineText', value: (r) => text(r.slug), writeTo: 'slug' },
   { name: 'Active', type: 'checkbox', value: (r) => bool(r.active), writeTo: 'active' },

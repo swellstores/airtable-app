@@ -11,7 +11,6 @@ import {
   omitUnchangedEditable,
   pullTable,
   pullTables,
-  storeLocale,
 } from "../../functions/lib/pull";
 import { PRODUCT, SETTINGS, VARIANT, fetchCall, jsonResponse } from "../helpers/fixtures";
 
@@ -150,45 +149,11 @@ describe("applyDiff", () => {
     expect(swell.put).not.toHaveBeenCalled();
   });
 
-  it("also writes names to the store's locale, which reads show", async () => {
-    const swell = swellMock();
-    const category = { id: P_ID, name: "Old" };
-    await applyDiff(swell as any, "categories", category, { update: { name: "New", active: false }, invalid: [] }, "en-US");
-    expect(swell.put).toHaveBeenNthCalledWith(1, `/categories/${P_ID}`, { name: "New", active: false });
-    expect(swell.put).toHaveBeenNthCalledWith(2, `/categories/${P_ID}`, { name: "New", $locale: "en-US" });
-  });
-
-  it("writes only the base value without a locale or a localized field", async () => {
-    const swell = swellMock();
-    await applyDiff(swell as any, "categories", { id: P_ID }, { update: { name: "New" }, invalid: [] });
-    await applyDiff(swell as any, "products", SWELL_PRODUCT, { update: { price: 4 }, invalid: [] }, "en-US");
-    await applyDiff(swell as any, "accounts", { id: P_ID }, { update: { first_name: "A" }, invalid: [] }, "en-US");
-    expect(swell.put).toHaveBeenCalledTimes(3);
-  });
-
-  it("names of products, variants, coupons and categories are localized", () => {
-    const localized = Object.keys(TABLES).filter((id) => TABLES[id].columns.some((c) => c.localized));
-    expect(localized).toEqual(["products", "variants", "coupons", "categories"]);
-  });
-
   it("throws a non-retryable error when Swell rejects the values", async () => {
     const swell = swellMock([], { errors: { name: { code: "REQUIRED", message: "Required" } } });
     const err = await applyDiff(swell as any, "products", SWELL_PRODUCT, { update: { name: null }, invalid: [] }).catch((e) => e);
     expect(err.message).toBe("Swell rejected the edit - name: Required");
     expect(err.status).toBe(422);
-  });
-});
-
-describe("storeLocale", () => {
-  it("reads the store's default locale", async () => {
-    const get = vi.fn().mockResolvedValue({ locale: "en-US", locales: [] });
-    expect(await storeLocale({ get } as any)).toBe("en-US");
-    expect(get).toHaveBeenCalledWith("/:clients/:self");
-  });
-
-  it("returns null when it's missing or can't be read", async () => {
-    expect(await storeLocale({ get: vi.fn().mockResolvedValue({}) } as any)).toBeNull();
-    expect(await storeLocale({ get: vi.fn().mockRejectedValue(new Error("denied")) } as any)).toBeNull();
   });
 });
 
@@ -233,13 +198,6 @@ describe("pullTable", () => {
       date_last_change: "2026-10-06T10:05:00.000Z",
     });
     expect(save).not.toHaveProperty("last_error");
-  });
-
-  it("writes name edits to the given locale too", async () => {
-    pages({ records: [{ id: "rec1", fields: { ...SAME_ROW, Name: "Mug" } }] });
-    const swell = swellMock();
-    await pullTable(swell as any, PULL_SETTINGS as any, "products", STATE, Infinity, clock(), "en-US");
-    expect(swell.put).toHaveBeenLastCalledWith(`/products/${P_ID}`, { name: "Mug", $locale: "en-US" });
   });
 
   it("does nothing for rows that already match Swell or were deleted there", async () => {

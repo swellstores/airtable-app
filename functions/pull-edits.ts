@@ -1,5 +1,5 @@
 import { getAirtableSettings, isConfigured } from './lib/airtable';
-import { TIME_BUDGET_MS, pullTable, pullTables, storeLocale, type PullState } from './lib/pull';
+import { TIME_BUDGET_MS, pullTable, pullTables, type PullState } from './lib/pull';
 
 export const config: SwellConfig = {
   description: 'Write Airtable edits back to Swell',
@@ -28,8 +28,6 @@ export default async function (req: SwellRequest) {
   // Tables that waited longest go first, so one busy table can't starve the others
   const order = [...tables].sort((a, b) => String(states[a]?.date_last_run || '').localeCompare(String(states[b]?.date_last_run || '')));
 
-  const locale = await storeLocale(swell);
-
   for (const id of order) {
     const state = states[id];
     if (!state) {
@@ -41,7 +39,7 @@ export default async function (req: SwellRequest) {
     if (Date.now() >= deadline) {
       break;
     }
-    const save = await pullTable(swell, settings, id, state, deadline, Date.now, locale);
+    const save = await pullTable(swell, settings, id, state, deadline);
     await swell.put(`/pulls/${state.id}`, save);
   }
 }

@@ -152,37 +152,16 @@ function assertWritten(result: any) {
   }
 }
 
-// The store's default locale, e.g. "en-US". Reads return a field's value in this locale when it has one.
-export async function storeLocale(swell: SwellAPI): Promise<string | null> {
-  try {
-    const client: any = await swell.get('/:clients/:self');
-    return typeof client?.locale === 'string' && client.locale ? client.locale : null;
-  } catch {
-    return null;
-  }
-}
-
-// Writes the edits. Localized fields (names) are written to the base value and to the store's locale,
-// since the dashboard and API reads show the locale value whenever one has been saved.
+// Writes the edits. Names go to the base value, which is the store's default locale.
 export async function applyDiff(
   swell: SwellAPI,
   id: string,
   record: Record<string, any>,
   diff: RowDiff,
-  locale: string | null = null,
 ): Promise<void> {
   if (Object.keys(diff.update).length) {
     const path = `${TABLES[id].path}/${record.id}`;
     assertWritten(await swell.put(path, diff.update));
-    const localized: Record<string, any> = {};
-    for (const column of editableColumns(id)) {
-      if (column.localized && column.writeTo! in diff.update) {
-        localized[column.writeTo!] = diff.update[column.writeTo!];
-      }
-    }
-    if (locale && Object.keys(localized).length) {
-      assertWritten(await swell.put(path, { ...localized, $locale: locale }));
-    }
   }
   if (diff.stock) {
     const isVariant = Boolean(TABLES[id].parent);
@@ -244,7 +223,6 @@ export async function pullTable(
   state: PullState,
   deadline: number,
   now: () => number = Date.now,
-  locale: string | null = null,
 ): Promise<Record<string, any>> {
   const passStart = state.date_pass_started || iso(now());
   const cursor = state.date_cursor || passStart;
@@ -289,7 +267,7 @@ export async function pullTable(
           break;
         }
         try {
-          await applyDiff(swell, id, record, diff, locale);
+          await applyDiff(swell, id, record, diff);
           changed++;
         } catch (err) {
           if (isRetryable(err)) {
