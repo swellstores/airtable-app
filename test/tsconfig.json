@@ -1,0 +1,24 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "types": [
+      "@cloudflare/vitest-pool-workers",
+      "@swell/app-types",
+      "vitest/globals"
+    ],
+    "lib": [
+      "esnext",
+      "webworker",
+      "webworker.iterable"
+    ]
+  },
+  "include": [
+    "./**/*.ts",
+    "../functions/**/*.ts"
+  ],
+  "exclude": [
+    "../node_modules"
+  ]
+}

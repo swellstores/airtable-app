@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json.swell.store/model.json",
+  "collection": "pulls",
+  "label": "Airtable edits",
+  "description": "Write-back state per Airtable table: which edits have been read and what was written to Swell",
+  "name_pattern": "{table}",
+  "fields": {
+    "table": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "enum": [
+        "products",
+        "variants",
+        "accounts",
+        "coupons",
+        "categories"
+      ],
+      "description": "App table whose Airtable edits are written back"
+    },
+    "date_cursor": {
+      "type": "date",
+      "description": "Rows edited after this time are read on the next pass"
+    },
+    "offset": {
+      "type": "string",
+      "description": "Airtable page offset of a pass that ran out of time; the next run continues there"
+    },
+    "date_pass_started": {
+      "type": "date",
+      "description": "Start of the unfinished pass; becomes the cursor when the pass finishes"
+    },
+    "date_last_run": {
+      "type": "date"
+    },
+    "date_last_change": {
+      "type": "date",
+      "description": "Last time an Airtable edit was written to Swell"
+    },
+    "changed": {
+      "type": "int",
+      "default": 0,
+      "description": "Records updated in Swell"
+    },
+    "failed": {
+      "type": "int",
+      "default": 0,
+      "description": "Edits Swell rejected"
+    },
+    "last_error": {
+      "type": "string"
+    },
+    "date_last_error": {
+      "type": "date"
+    }
+  },
+  "events": {
+    "types": [
+      {
+        "id": "created"
+      },
+      {
+        "id": "updated"
+      },
+      {
+        "id": "deleted"
+      }
+    ]
+  }
+}

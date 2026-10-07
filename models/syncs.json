@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json.swell.store/model.json",
+  "collection": "syncs",
+  "label": "Airtable syncs",
+  "description": "Airtable sync jobs: connection tests, table setup and backfills",
+  "name_pattern": "{type} {collection}",
+  "fields": {
+    "type": {
+      "type": "string",
+      "required": true,
+      "default": "backfill",
+      "enum": [
+        "test",
+        "setup",
+        "backfill"
+      ]
+    },
+    "collection": {
+      "type": "string",
+      "enum": [
+        "orders",
+        "order_items",
+        "accounts",
+        "products",
+        "variants",
+        "subscriptions",
+        "coupons",
+        "categories"
+      ],
+      "description": "Collection to backfill (backfill jobs only)"
+    },
+    "status": {
+      "type": "string",
+      "default": "pending",
+      "enum": [
+        "pending",
+        "running",
+        "waiting",
+        "completed",
+        "failed",
+        "canceled"
+      ]
+    },
+    "date_from": {
+      "type": "date",
+      "description": "Backfill only records created on or after this date"
+    },
+    "replace_columns": {
+      "type": "bool",
+      "default": false,
+      "description": "Setup jobs: rename columns with the wrong type to \"<name> (old)\" and create them again"
+    },
+    "last_id": {
+      "type": "string",
+      "description": "ID of the last record sent; the next page starts after it"
+    },
+    "pages": {
+      "type": "int",
+      "default": 0,
+      "description": "Steps run so far"
+    },
+    "sent": {
+      "type": "int",
+      "default": 0,
+      "description": "Records sent, or tables and columns created"
+    },
+    "total": {
+      "type": "int",
+      "description": "Records to send, or tables and columns to create, counted on the first step"
+    },
+    "message": {
+      "type": "string",
+      "description": "Result of a connection test or table setup"
+    },
+    "last_error": {
+      "type": "string"
+    },
+    "retries": {
+      "type": "int",
+      "default": 0,
+      "description": "Automatic retries after rate limits or Airtable errors"
+    },
+    "date_retry": {
+      "type": "date",
+      "description": "When a waiting job is retried"
+    },
+    "date_started": {
+      "type": "date"
+    },
+    "date_completed": {
+      "type": "date"
+    }
+  },
+  "events": {
+    "types": [
+      {
+        "id": "created"
+      },
+      {
+        "id": "updated"
+      },
+      {
+        "id": "deleted"
+      }
+    ]
+  }
+}

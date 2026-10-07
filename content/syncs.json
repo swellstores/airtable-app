@@ -1,0 +1,435 @@
+{
+  "$schema": "https://json.swell.store/content.json",
+  "collection": "syncs",
+  "label": "Airtable syncs",
+  "description": "Test the Airtable connection, create tables and send existing records",
+  "fields": [
+    {
+      "id": "type",
+      "label": "Type",
+      "type": "select",
+      "required": true,
+      "default": "backfill",
+      "options": [
+        {
+          "value": "test",
+          "label": "Connection test"
+        },
+        {
+          "value": "setup",
+          "label": "Create tables & columns"
+        },
+        {
+          "value": "backfill",
+          "label": "Backfill"
+        }
+      ],
+      "description": "Connection test checks the token, base, tables and columns. Create tables & columns adds whatever is missing. Backfill sends existing records of one collection."
+    },
+    {
+      "id": "collection",
+      "label": "Collection",
+      "type": "select",
+      "options": [
+        {
+          "value": "orders",
+          "label": "Orders"
+        },
+        {
+          "value": "order_items",
+          "label": "Order line items"
+        },
+        {
+          "value": "accounts",
+          "label": "Customers"
+        },
+        {
+          "value": "products",
+          "label": "Products"
+        },
+        {
+          "value": "variants",
+          "label": "Product variants"
+        },
+        {
+          "value": "subscriptions",
+          "label": "Subscriptions"
+        },
+        {
+          "value": "coupons",
+          "label": "Coupons"
+        },
+        {
+          "value": "categories",
+          "label": "Categories"
+        }
+      ]
+    },
+    {
+      "id": "status",
+      "label": "Status",
+      "type": "select",
+      "readonly": true,
+      "options": [
+        {
+          "value": "pending",
+          "label": "Pending"
+        },
+        {
+          "value": "running",
+          "label": "Running"
+        },
+        {
+          "value": "waiting",
+          "label": "Waiting to retry"
+        },
+        {
+          "value": "completed",
+          "label": "Completed"
+        },
+        {
+          "value": "failed",
+          "label": "Failed"
+        },
+        {
+          "value": "canceled",
+          "label": "Canceled"
+        }
+      ]
+    },
+    {
+      "id": "date_from",
+      "label": "Created on or after",
+      "type": "date",
+      "description": "Optional. Leave empty to send every record."
+    },
+    {
+      "id": "replace_columns",
+      "label": "Replace columns with the wrong type",
+      "type": "boolean",
+      "ui": "toggle",
+      "description": "Renames columns whose type the app can't write into to \"<name> (old)\", keeping their data, and creates them again with the right type. Run a backfill afterwards to fill them."
+    },
+    {
+      "id": "sent",
+      "label": "Done",
+      "type": "number",
+      "readonly": true
+    },
+    {
+      "id": "total",
+      "label": "Total",
+      "type": "number",
+      "readonly": true
+    },
+    {
+      "id": "pages",
+      "label": "Steps",
+      "type": "number",
+      "readonly": true
+    },
+    {
+      "id": "last_id",
+      "label": "Last record ID",
+      "type": "short_text",
+      "readonly": true
+    },
+    {
+      "id": "message",
+      "label": "Result",
+      "type": "long_text",
+      "readonly": true
+    },
+    {
+      "id": "last_error",
+      "label": "Error",
+      "type": "long_text",
+      "readonly": true
+    },
+    {
+      "id": "retries",
+      "label": "Retries",
+      "type": "number",
+      "readonly": true
+    },
+    {
+      "id": "date_retry",
+      "label": "Next retry",
+      "type": "date",
+      "readonly": true
+    },
+    {
+      "id": "date_started",
+      "label": "Started",
+      "type": "date",
+      "readonly": true
+    },
+    {
+      "id": "date_completed",
+      "label": "Finished",
+      "type": "date",
+      "readonly": true
+    }
+  ],
+  "views": [
+    {
+      "id": "list",
+      "nav": {
+        "label": "Airtable",
+        "icon": "integrations"
+      },
+      "sort": {
+        "date_created": "desc"
+      },
+      "fields": [
+        {
+          "id": "type"
+        },
+        {
+          "id": "collection"
+        },
+        {
+          "id": "status"
+        },
+        {
+          "id": "sent"
+        },
+        {
+          "id": "total"
+        },
+        {
+          "id": "date_started"
+        },
+        {
+          "id": "date_completed"
+        }
+      ],
+      "tabs": [
+        {
+          "id": "active",
+          "label": "Active",
+          "query": {
+            "where": {
+              "status": {
+                "$in": [
+                  "pending",
+                  "running",
+                  "waiting"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "failed",
+          "label": "Failed",
+          "query": {
+            "where": {
+              "status": "failed"
+            }
+          }
+        }
+      ],
+      "actions": [
+        "new",
+        {
+          "id": "sync_all",
+          "label": "Backfill all synced collections",
+          "function": "sync-all",
+          "loading_label": "Starting backfills...",
+          "modal": {
+            "title": "Backfill all synced collections",
+            "description": "Starts one backfill for each collection selected in the app settings. Collections that already have an active backfill are skipped. Existing Airtable rows are updated, not duplicated.",
+            "submit_label": "Start",
+            "fields": [
+              {
+                "id": "date_from",
+                "label": "Created on or after",
+                "type": "date",
+                "description": "Optional. Leave empty to send every record."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "new",
+      "fields": [
+        {
+          "id": "type"
+        },
+        {
+          "id": "collection",
+          "required": true,
+          "conditions": {
+            "type": "backfill"
+          }
+        },
+        {
+          "id": "date_from",
+          "conditions": {
+            "type": "backfill"
+          }
+        },
+        {
+          "id": "replace_columns",
+          "conditions": {
+            "type": "setup"
+          }
+        }
+      ]
+    },
+    {
+      "id": "edit",
+      "title": "Airtable {{ record.type }} {{ record.collection }}",
+      "fields": [
+        {
+          "type": "field_row",
+          "fields": [
+            {
+              "id": "type",
+              "readonly": true,
+              "admin_span": 2
+            },
+            {
+              "id": "status",
+              "admin_span": 2
+            }
+          ]
+        },
+        {
+          "type": "field_row",
+          "fields": [
+            {
+              "id": "collection",
+              "readonly": true,
+              "admin_span": 2
+            },
+            {
+              "id": "date_from",
+              "readonly": true,
+              "admin_span": 2
+            }
+          ],
+          "conditions": {
+            "type": "backfill"
+          }
+        },
+        {
+          "type": "field_row",
+          "fields": [
+            {
+              "id": "sent",
+              "admin_span": 1
+            },
+            {
+              "id": "total",
+              "admin_span": 1
+            },
+            {
+              "id": "pages",
+              "admin_span": 1
+            }
+          ]
+        },
+        {
+          "type": "field_row",
+          "fields": [
+            {
+              "id": "date_started",
+              "admin_span": 2
+            },
+            {
+              "id": "date_completed",
+              "admin_span": 2
+            }
+          ]
+        },
+        {
+          "id": "last_id",
+          "conditions": {
+            "type": "backfill"
+          }
+        },
+        {
+          "id": "message",
+          "conditions": {
+            "message": {
+              "$exists": true
+            }
+          }
+        },
+        {
+          "id": "replace_columns",
+          "readonly": true,
+          "conditions": {
+            "type": "setup"
+          }
+        },
+        {
+          "id": "last_error",
+          "conditions": {
+            "last_error": {
+              "$exists": true
+            }
+          }
+        },
+        {
+          "type": "field_row",
+          "fields": [
+            {
+              "id": "retries",
+              "admin_span": 1
+            },
+            {
+              "id": "date_retry",
+              "admin_span": 3
+            }
+          ],
+          "conditions": {
+            "retries": {
+              "$gt": 0
+            }
+          }
+        }
+      ],
+      "actions": [
+        {
+          "id": "cancel",
+          "label": "Cancel",
+          "function": "sync-control",
+          "conditions": {
+            "status": {
+              "$in": [
+                "pending",
+                "running",
+                "waiting"
+              ]
+            }
+          },
+          "modal": {
+            "description": "Stops after the current step. Rows already sent stay in Airtable."
+          }
+        },
+        {
+          "id": "resume",
+          "label": "Resume",
+          "function": "sync-control",
+          "conditions": {
+            "status": {
+              "$in": [
+                "failed",
+                "canceled",
+                "waiting"
+              ]
+            }
+          },
+          "modal": {
+            "description": "Failed and canceled jobs continue where they stopped. A waiting job retries now instead of at its retry time."
+          }
+        }
+      ]
+    }
+  ]
+}

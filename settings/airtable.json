@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json.swell.store/setting.json",
+  "label": "Airtable",
+  "description": "Sync orders, line items, customers, products, variants, subscriptions, coupons and categories to an Airtable base. Create a personal access token at airtable.com/create/tokens with scopes data.records:read, data.records:write, schema.bases:read and schema.bases:write, and give it access to your base. Then open Airtable in the dashboard sidebar and create a sync job of type \"Create tables & columns\", followed by \"Backfill all synced collections\".",
+  "fields": [
+    {
+      "id": "access_token",
+      "label": "Personal access token",
+      "type": "short_text",
+      "required": true,
+      "placeholder": "pat...",
+      "description": "From airtable.com/create/tokens. Needs data.records:read and data.records:write; add schema.bases:read and schema.bases:write to let the app check and create tables."
+    },
+    {
+      "id": "base_id",
+      "label": "Base ID",
+      "type": "short_text",
+      "required": true,
+      "placeholder": "app...",
+      "description": "Starts with \"app\". It's the part after airtable.com/ in the base's URL."
+    },
+    {
+      "id": "collections",
+      "label": "Collections to sync",
+      "type": "select",
+      "ui": "checkboxes",
+      "multi": true,
+      "default": [
+        "orders",
+        "accounts",
+        "products"
+      ],
+      "options": [
+        {
+          "value": "orders",
+          "label": "Orders"
+        },
+        {
+          "value": "order_items",
+          "label": "Order line items (needs Orders)"
+        },
+        {
+          "value": "accounts",
+          "label": "Customers"
+        },
+        {
+          "value": "products",
+          "label": "Products"
+        },
+        {
+          "value": "variants",
+          "label": "Product variants (needs Products)"
+        },
+        {
+          "value": "subscriptions",
+          "label": "Subscriptions"
+        },
+        {
+          "value": "coupons",
+          "label": "Coupons"
+        },
+        {
+          "value": "categories",
+          "label": "Categories"
+        }
+      ]
+    },
+    {
+      "id": "pull_collections",
+      "label": "Write Airtable edits back to Swell",
+      "type": "select",
+      "ui": "checkboxes",
+      "multi": true,
+      "default": [],
+      "options": [
+        {
+          "value": "products",
+          "label": "Products: name, SKU, active, price, on sale, sale price, track stock, stock level"
+        },
+        {
+          "value": "variants",
+          "label": "Product variants: name, SKU, active, price, sale price, stock level"
+        },
+        {
+          "value": "accounts",
+          "label": "Customers: email, first name, last name, phone, email opt-in"
+        },
+        {
+          "value": "coupons",
+          "label": "Coupons: name, active, use limit, valid from, expires"
+        },
+        {
+          "value": "categories",
+          "label": "Categories: name, slug, active"
+        }
+      ],
+      "description": "Edits to these columns in Airtable are written to Swell within about a minute. The collection must also be synced. Changing a stock level adds a stock adjustment for the difference. Other columns stay read-only: edits to them are overwritten by the next Swell change. New rows and deleted rows in Airtable are not copied to Swell."
+    },
+    {
+      "type": "field_row",
+      "fields": [
+        {
+          "id": "orders_table",
+          "label": "Orders table",
+          "type": "short_text",
+          "default": "Orders",
+          "description": "Table name or ID (tbl...)",
+          "admin_span": 2
+        },
+        {
+          "id": "order_items_table",
+          "label": "Order line items table",
+          "type": "short_text",
+          "default": "Order line items",
+          "description": "Table name or ID (tbl...)",
+          "admin_span": 2
+        }
+      ]
+    },
+    {
+      "type": "field_row",
+      "fields": [
+        {
+          "id": "accounts_table",
+          "label": "Customers table",
+          "type": "short_text",
+          "default": "Customers",
+          "description": "Table name or ID (tbl...)",
+          "admin_span": 2
+        },
+        {
+          "id": "products_table",
+          "label": "Products table",
+          "type": "short_text",
+          "default": "Products",
+          "description": "Table name or ID (tbl...)",
+          "admin_span": 2
+        }
+      ]
+    },
+    {
+      "type": "field_row",
+      "fields": [
+        {
+          "id": "variants_table",
+          "label": "Product variants table",
+          "type": "short_text",
+          "default": "Product variants",
+          "description": "Table name or ID (tbl...)",
+          "admin_span": 2
+        },
+        {
+          "id": "subscriptions_table",
+          "label": "Subscriptions table",
+          "type": "short_text",
+          "default": "Subscriptions",
+          "description": "Table name or ID (tbl...)",
+          "admin_span": 2
+        }
+      ]
+    },
+    {
+      "type": "field_row",
+      "fields": [
+        {
+          "id": "coupons_table",
+          "label": "Coupons table",
+          "type": "short_text",
+          "default": "Coupons",
+          "description": "Table name or ID (tbl...)",
+          "admin_span": 2
+        },
+        {
+          "id": "categories_table",
+          "label": "Categories table",
+          "type": "short_text",
+          "default": "Categories",
+          "description": "Table name or ID (tbl...)",
+          "admin_span": 2
+        }
+      ]
+    },
+    {
+      "id": "on_delete",
+      "label": "When a record is deleted in Swell",
+      "type": "select",
+      "default": "delete",
+      "options": [
+        {
+          "value": "delete",
+          "label": "Delete the Airtable row"
+        },
+        {
+          "value": "mark",
+          "label": "Check the row's Deleted column"
+        },
+        {
+          "value": "keep",
+          "label": "Keep the row unchanged"
+        }
+      ],
+      "admin_span": 4
+    },
+    {
+      "id": "backfill_page_size",
+      "label": "Backfill page size",
+      "type": "number",
+      "default": 50,
+      "min": 1,
+      "max": 100,
+      "description": "Records (or order line items) sent per backfill step (1-100). Steps that hit Airtable's rate limit wait and retry automatically; lower the size if that happens often."
+    },
+    {
+      "id": "enabled",
+      "label": "Enabled",
+      "type": "boolean",
+      "ui": "toggle",
+      "default": true,
+      "description": "Turns off all syncing without uninstalling the app"
+    }
+  ]
+}

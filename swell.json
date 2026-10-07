@@ -1,0 +1,34 @@
+{
+  "description": "Sync Swell orders, customers, products and more to Airtable",
+  "id": "airtable",
+  "name": "Airtable",
+  "type": "integration",
+  "version": "1.0.0",
+  "permissions": [],
+  "images": [
+    {
+      "id": "live-sync",
+      "title": "Your store, live in Airtable",
+      "description": "Orders, customers and products are created and updated in Airtable as soon as they change in Swell.",
+      "image_src": "assets/screenshots/1-live-sync.png"
+    },
+    {
+      "id": "tables-created",
+      "title": "Tables set up for you",
+      "description": "One click creates the Orders, Customers and Products tables with typed columns, or adds missing columns to your own tables.",
+      "image_src": "assets/screenshots/2-tables-created.png"
+    },
+    {
+      "id": "backfills",
+      "title": "Backfill your history",
+      "description": "Send existing records per collection or all at once, with progress, cancel and resume.",
+      "image_src": "assets/screenshots/3-backfills.png"
+    },
+    {
+      "id": "setup",
+      "title": "Connected in a few minutes",
+      "description": "Add an Airtable access token and base ID, then run a connection test.",
+      "image_src": "assets/screenshots/4-setup.png"
+    }
+  ]
+}

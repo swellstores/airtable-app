@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json.swell.store/content.json",
+  "collection": "pulls",
+  "label": "Airtable edits",
+  "description": "Edits made in Airtable and written back to Swell, per table",
+  "fields": [
+    {
+      "id": "table",
+      "label": "Table",
+      "type": "select",
+      "readonly": true,
+      "options": [
+        {
+          "value": "products",
+          "label": "Products"
+        },
+        {
+          "value": "variants",
+          "label": "Product variants"
+        },
+        {
+          "value": "accounts",
+          "label": "Customers"
+        },
+        {
+          "value": "coupons",
+          "label": "Coupons"
+        },
+        {
+          "value": "categories",
+          "label": "Categories"
+        }
+      ]
+    },
+    {
+      "id": "changed",
+      "label": "Records updated",
+      "type": "number",
+      "readonly": true
+    },
+    {
+      "id": "failed",
+      "label": "Edits rejected",
+      "type": "number",
+      "readonly": true
+    },
+    {
+      "id": "date_last_run",
+      "label": "Last checked",
+      "type": "date",
+      "readonly": true
+    },
+    {
+      "id": "date_last_change",
+      "label": "Last update",
+      "type": "date",
+      "readonly": true
+    },
+    {
+      "id": "date_cursor",
+      "label": "Reading edits made after",
+      "type": "date",
+      "readonly": true
+    },
+    {
+      "id": "last_error",
+      "label": "Last error",
+      "type": "long_text",
+      "readonly": true
+    },
+    {
+      "id": "date_last_error",
+      "label": "Last error at",
+      "type": "date",
+      "readonly": true
+    }
+  ],
+  "views": [
+    {
+      "id": "list",
+      "nav": {
+        "label": "Airtable edits",
+        "icon": "integrations"
+      },
+      "sort": {
+        "table": "asc"
+      },
+      "fields": [
+        {
+          "id": "table"
+        },
+        {
+          "id": "changed"
+        },
+        {
+          "id": "failed"
+        },
+        {
+          "id": "date_last_run"
+        },
+        {
+          "id": "date_last_change"
+        },
+        {
+          "id": "date_last_error"
+        }
+      ]
+    },
+    {
+      "id": "edit",
+      "title": "Airtable edits: {{ record.table }}",
+      "fields": [
+        {
+          "type": "field_row",
+          "fields": [
+            {
+              "id": "table",
+              "admin_span": 2
+            },
+            {
+              "id": "date_cursor",
+              "admin_span": 2
+            }
+          ]
+        },
+        {
+          "type": "field_row",
+          "fields": [
+            {
+              "id": "changed",
+              "admin_span": 1
+            },
+            {
+              "id": "failed",
+              "admin_span": 1
+            },
+            {
+              "id": "date_last_run",
+              "admin_span": 1
+            },
+            {
+              "id": "date_last_change",
+              "admin_span": 1
+            }
+          ]
+        },
+        {
+          "id": "last_error",
+          "conditions": {
+            "last_error": {
+              "$exists": true
+            }
+          }
+        },
+        {
+          "id": "date_last_error",
+          "conditions": {
+            "last_error": {
+              "$exists": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
