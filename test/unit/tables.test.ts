@@ -215,12 +215,19 @@ describe("toFields", () => {
       "Email opt-in": true,
       Phone: null,
     });
-    expect(toFields("products", { id: ID, name: "Mug", price: 9.5, active: true })).toMatchObject({
+    expect(
+      toFields("products", { id: ID, name: "Mug", price: 1, active: true, purchase_options: { standard: { price: 9.5, sale: true, sale_price: 8 } } }),
+    ).toMatchObject({
       Name: "Mug",
       Price: 9.5,
       Active: true,
-      "On sale": false,
+      "On sale": true,
+      "Sale price": 8,
     });
+    expect(toFields("products", { id: ID, name: "Mug", price: 9.5 })).toMatchObject({ Price: null, "On sale": false, "Sale price": null });
+    expect(
+      toFields("variants", { ...VARIANT, purchase_options: { standard: { price: 5, sale: true, sale_price: 4 } } }),
+    ).toMatchObject({ Price: 5, "On sale": true, "Sale price": 4 });
     expect(
       toFields("subscriptions", {
         id: ID,

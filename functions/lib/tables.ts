@@ -30,7 +30,7 @@ export interface Column {
   precision?: number;
   // `undefined` leaves the Airtable value unchanged; `null` clears it
   value: (row: Record<string, any>, ctx: RowContext) => any;
-  // Editable in Airtable: the Swell field an edit is written to, or STOCK for a stock adjustment
+  // Editable in Airtable: the Swell field an edit is written to (a dot path for nested fields), or STOCK for a stock adjustment
   writeTo?: string;
   // Swell stores the field per locale; edits are also written to the store's locale, the value the dashboard shows
   localized?: boolean;
@@ -175,6 +175,18 @@ const parentLink = (name: string): Column => ({
   value: (_r, ctx) => (ctx.parentRecId === undefined ? undefined : ctx.parentRecId ? [ctx.parentRecId] : []),
 });
 
+// Products and variants keep their one-time purchase price in purchase_options.standard
+const STANDARD_PURCHASE_OPTION = 'purchase_options.standard';
+const standard = (r: Record<string, any>): Record<string, any> => r.purchase_options?.standard || {};
+const standardPrice: Column = { name: 'Price', type: 'number', value: (r) => num(standard(r).price), writeTo: `${STANDARD_PURCHASE_OPTION}.price` };
+const standardSale: Column = { name: 'On sale', type: 'checkbox', value: (r) => bool(standard(r).sale), writeTo: `${STANDARD_PURCHASE_OPTION}.sale` };
+const standardSalePrice: Column = {
+  name: 'Sale price',
+  type: 'number',
+  value: (r) => num(standard(r).sale_price),
+  writeTo: `${STANDARD_PURCHASE_OPTION}.sale_price`,
+};
+
 const ORDER_COLUMNS: Column[] = [
   { name: 'Number', type: 'singleLineText', value: (r) => text(r.number) },
   swellId,
@@ -250,9 +262,9 @@ const PRODUCT_COLUMNS: Column[] = [
   { name: 'Slug', type: 'singleLineText', value: (r) => text(r.slug) },
   { name: 'Type', type: 'singleLineText', value: (r) => text(r.type) },
   { name: 'Active', type: 'checkbox', value: (r) => bool(r.active), writeTo: 'active' },
-  { name: 'Price', type: 'number', value: (r) => num(r.price), writeTo: 'price' },
-  { name: 'On sale', type: 'checkbox', value: (r) => bool(r.sale), writeTo: 'sale' },
-  { name: 'Sale price', type: 'number', value: (r) => num(r.sale_price), writeTo: 'sale_price' },
+  standardPrice,
+  standardSale,
+  standardSalePrice,
   { name: 'Track stock', type: 'checkbox', value: (r) => bool(r.stock_tracking), writeTo: 'stock_tracking' },
   { name: 'Stock level', type: 'number', precision: 0, value: (r) => num(r.stock_level), writeTo: STOCK },
   { name: 'Stock status', type: 'singleLineText', value: (r) => text(r.stock_status) },
@@ -268,8 +280,9 @@ const VARIANT_COLUMNS: Column[] = [
   { name: 'Product Swell ID', type: 'singleLineText', value: (r) => text(r.parent_id) },
   { name: 'SKU', type: 'singleLineText', value: (r) => text(r.sku), writeTo: 'sku' },
   { name: 'Active', type: 'checkbox', value: (r) => bool(r.active), writeTo: 'active' },
-  { name: 'Price', type: 'number', value: (r) => num(r.price), writeTo: 'price' },
-  { name: 'Sale price', type: 'number', value: (r) => num(r.sale_price), writeTo: 'sale_price' },
+  standardPrice,
+  standardSale,
+  standardSalePrice,
   { name: 'Stock level', type: 'number', precision: 0, value: (r) => num(r.stock_level), writeTo: STOCK },
   { name: 'Currency', type: 'singleLineText', value: (r) => text(r.currency) },
   dateCreated,

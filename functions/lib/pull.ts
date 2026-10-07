@@ -124,9 +124,19 @@ export function diffRow(id: string, record: Record<string, any>, fields: Record<
       diff.stock = value - (num(record.stock_level) ?? 0);
       continue;
     }
-    diff.update[column.writeTo!] = value;
+    setPath(diff.update, column.writeTo!, value);
   }
   return diff;
+}
+
+// Sets `a.b.c` in a nested update; Swell merges nested objects on PUT, so siblings are kept
+function setPath(target: Record<string, any>, path: string, value: any) {
+  const keys = path.split('.');
+  let node = target;
+  for (const key of keys.slice(0, -1)) {
+    node = node[key] ??= {};
+  }
+  node[keys[keys.length - 1]] = value;
 }
 
 export function hasChanges(diff: RowDiff): boolean {
@@ -334,7 +344,9 @@ export function omitUnchangedEditable(id: string, fields: Record<string, any>, c
   }
   const out = { ...fields };
   for (const column of editableColumns(id)) {
-    if (column.writeTo !== STOCK && !changed.includes(sourceField(column)!)) {
+    // Events report top-level fields: purchase_options, or the price/sale/sale_price fields Swell mirrors from it
+    const path = sourceField(column)!.split('.');
+    if (column.writeTo !== STOCK && !changed.includes(path[0]) && !changed.includes(path[path.length - 1])) {
       delete out[column.name];
     }
   }

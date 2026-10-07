@@ -100,11 +100,18 @@ export const VARIANT = {
   sku: "SMPG",
   active: true,
   price: 3,
+  purchase_options: { standard: { active: true, price: 3, sale: false, sale_price: null, prices: [] } },
   stock_level: 7,
   currency: "USD",
 };
 
-export const PRODUCT = { id: "6ac4b32256c0310012a102eb", name: "Simple", price: 3, active: true };
+export const PRODUCT = {
+  id: "6ac4b32256c0310012a102eb",
+  name: "Simple",
+  price: 3,
+  purchase_options: { standard: { active: true, price: 3, sale: false, sale_price: null, prices: [] } },
+  active: true,
+};
 
 // fetch implementation that answers like Airtable: upserts echo their records with ids "rec<Swell ID>",
 // meta reads return `tables`, formula lookups return what `find(url)` returns

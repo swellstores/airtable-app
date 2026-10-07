@@ -78,7 +78,7 @@
         },
         {
           "value": "variants",
-          "label": "Product variants: name, SKU, active, price, sale price, stock level"
+          "label": "Product variants: name, SKU, active, price, on sale, sale price, stock level"
         },
         {
           "value": "accounts",

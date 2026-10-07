@@ -85,8 +85,22 @@ describe("diffRow", () => {
 
   it("maps changed cells to Swell fields", () => {
     const diff = diffRow("products", SWELL_PRODUCT, { ...SAME_ROW, Name: "Mug", Price: 4.5, Active: undefined, "On sale": true, "Sale price": 4 });
-    expect(diff.update).toEqual({ name: "Mug", price: 4.5, active: false, sale: true, sale_price: 4 });
+    expect(diff.update).toEqual({
+      name: "Mug",
+      active: false,
+      purchase_options: { standard: { price: 4.5, sale: true, sale_price: 4 } },
+    });
     expect(hasChanges(diff)).toBe(true);
+  });
+
+  it("reads prices from purchase_options.standard, not the top-level copies", () => {
+    const record = { ...SWELL_PRODUCT, price: 99, sale: true, sale_price: 1 };
+    expect(diffRow("products", record, SAME_ROW).update).toEqual({});
+  });
+
+  it("writes variant price, on sale and sale price to purchase_options.standard", () => {
+    const row = { Name: "green", SKU: "SMPG", Active: true, Price: 5, "On sale": true, "Sale price": 4, "Stock level": 7 };
+    expect(diffRow("variants", VARIANT, row).update).toEqual({ purchase_options: { standard: { price: 5, sale: true, sale_price: 4 } } });
   });
 
   it("clears fields emptied in Airtable", () => {
@@ -121,8 +135,9 @@ describe("diffRow", () => {
 describe("applyDiff", () => {
   it("updates the record at its path", async () => {
     const swell = swellMock();
-    await applyDiff(swell as any, "variants", VARIANT, { update: { price: 4 }, invalid: [] });
-    expect(swell.put).toHaveBeenCalledWith(`/products:variants/${VARIANT.id}`, { price: 4 });
+    const update = { purchase_options: { standard: { price: 4 } } };
+    await applyDiff(swell as any, "variants", VARIANT, { update, invalid: [] });
+    expect(swell.put).toHaveBeenCalledWith(`/products:variants/${VARIANT.id}`, update);
     expect(swell.post).not.toHaveBeenCalled();
   });
 
@@ -209,7 +224,7 @@ describe("pullTable", () => {
     const swell = swellMock();
     const save = await pullTable(swell as any, PULL_SETTINGS as any, "products", STATE, Infinity, clock());
     expect(swell.get).toHaveBeenCalledWith("/products", { where: { id: { $in: [P_ID] } }, limit: 1 });
-    expect(swell.put).toHaveBeenCalledWith(`/products/${P_ID}`, { price: 9 });
+    expect(swell.put).toHaveBeenCalledWith(`/products/${P_ID}`, { purchase_options: { standard: { price: 9 } } });
     expect(save).toMatchObject({
       changed: 3,
       date_cursor: new Date(Date.parse("2026-10-06T10:05:00.000Z") - OVERLAP_MS).toISOString(),
@@ -301,6 +316,10 @@ describe("omitUnchangedEditable", () => {
 
   it("drops editable columns whose Swell field didn't change, but keeps stock level", () => {
     expect(omitUnchangedEditable("products", fields, ["price", "date_updated"])).toEqual({ "Swell ID": P_ID, Price: 3, "Stock level": 5, Slug: null });
+  });
+
+  it("treats a purchase_options change as a price change", () => {
+    expect(omitUnchangedEditable("products", fields, ["purchase_options"])).toEqual({ "Swell ID": P_ID, Price: 3, "Stock level": 5, Slug: null });
   });
 });
 
