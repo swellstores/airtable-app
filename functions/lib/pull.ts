@@ -26,7 +26,9 @@ import {
   type Column,
 } from './airtable';
 
-// pull-edits runs every minute and has 10 s; stop starting new work after this long
+// pull-edits runs every 5 minutes (its cron schedule)
+export const PULL_INTERVAL_MS = 5 * 60_000;
+// Stop starting new work after this long, well within the function's time limit
 export const TIME_BUDGET_MS = 7000;
 // A table's first check reads rows edited in this window; later checks read from the previous check with edits
 export const LOOKBACK_MS = 10 * 60_000;
@@ -64,8 +66,12 @@ export class SwellWriteError extends Error {
 
 const INVALID = Symbol('invalid');
 
-// Tables whose Airtable edits are written back: chosen in settings, synced, and with editable columns
+// Tables whose Airtable edits are written back: "Get updates from Airtable" on, chosen in settings, synced,
+// and with editable columns
 export function pullTables(settings: AirtableSettings): string[] {
+  if (settings.pull_enabled === false) {
+    return [];
+  }
   const selected: string[] = Array.isArray(settings.pull_collections) ? settings.pull_collections : [];
   return EDITABLE_TABLES.filter((id) => selected.includes(id) && isSynced(settings, id));
 }

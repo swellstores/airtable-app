@@ -176,6 +176,19 @@ describe("record-events", () => {
     await handler(req);
     expect(fetchCall(fetchMock).body.records[0].fields).toMatchObject({ Name: "Simple", Price: 3 });
   });
+
+  it("sends every column while Get updates from Airtable is off", async () => {
+    const { req } = setup({
+      type: "product.updated",
+      data: { id: PRODUCT.id },
+      eventData: { price: 3 },
+      record: PRODUCT,
+      settings: { ...SETTINGS, pull_enabled: false, pull_collections: ["products"] },
+    });
+    req.swell.get = vi.fn().mockResolvedValue(PRODUCT);
+    await handler(req);
+    expect(fetchCall(fetchMock).body.records[0].fields).toMatchObject({ Name: "Simple", Price: 3 });
+  });
 });
 
 describe("syncRecord", () => {

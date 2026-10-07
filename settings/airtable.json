@@ -93,6 +93,14 @@
       ]
     },
     {
+      "id": "pull_enabled",
+      "label": "Get updates from Airtable",
+      "type": "boolean",
+      "ui": "toggle",
+      "default": true,
+      "description": "Every 5 minutes, writes edits made in Airtable to Swell for the tables selected below. Turn off to stop reading Airtable; Swell changes still go to Airtable."
+    },
+    {
       "id": "pull_collections",
       "label": "Write Airtable edits back to Swell",
       "type": "select",
@@ -121,7 +129,7 @@
           "label": "Categories: name, slug, active"
         }
       ],
-      "description": "Edits to these columns in Airtable are written to Swell within about a minute. The collection must also be synced. Changing a stock level adds a stock adjustment for the difference. Other columns stay read-only: edits to them are overwritten by the next Swell change. New rows and deleted rows in Airtable are not copied to Swell."
+      "description": "Edits to these columns in Airtable are written to Swell within about 5 minutes, while Get updates from Airtable is on. The collection must also be synced. Changing a stock level adds a stock adjustment for the difference. Other columns stay read-only: edits to them are overwritten by the next Swell change. New rows and deleted rows in Airtable are not copied to Swell."
     },
     {
       "type": "field_row",

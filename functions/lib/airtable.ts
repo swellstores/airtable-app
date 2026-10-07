@@ -40,6 +40,7 @@ export interface AirtableSettings {
   subscriptions_table?: string;
   coupons_table?: string;
   categories_table?: string;
+  pull_enabled?: boolean;
   on_delete?: 'delete' | 'mark' | 'keep';
   backfill_page_size?: number;
   enabled?: boolean;

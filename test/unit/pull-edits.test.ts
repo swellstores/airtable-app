@@ -29,12 +29,12 @@ describe("pull-edits", () => {
     vi.restoreAllMocks();
   });
 
-  it("runs every minute", () => {
-    expect(config.cron?.schedule).toBe("* * * * *");
+  it("runs every 5 minutes", () => {
+    expect(config.cron?.schedule).toBe("*/5 * * * *");
   });
 
   it("does nothing when write-back is off, the app is disabled or not configured", async () => {
-    for (const settings of [SETTINGS, { ...PULL, enabled: false }, { ...PULL, access_token: "" }]) {
+    for (const settings of [SETTINGS, { ...PULL, enabled: false }, { ...PULL, access_token: "" }, { ...PULL, pull_enabled: false }]) {
       const { req, get } = setup(settings);
       await handler(req);
       expect(get).not.toHaveBeenCalled();
@@ -60,10 +60,10 @@ describe("pull-edits", () => {
     expect(put).toHaveBeenCalledWith("/pulls/p1", expect.objectContaining({ status: "completed" }));
   });
 
-  it("starts with a different table each minute", async () => {
-    const firstTable = async (minute: number) => {
+  it("starts with a different table each run", async () => {
+    const firstTable = async (run: number) => {
       vi.useFakeTimers({ toFake: ["Date"] });
-      vi.setSystemTime(minute * 60_000);
+      vi.setSystemTime(run * 5 * 60_000);
       fetchMock.mockClear();
       await handler(setup().req);
       vi.useRealTimers();

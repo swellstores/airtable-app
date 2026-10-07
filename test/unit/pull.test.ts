@@ -54,6 +54,12 @@ describe("pull settings", () => {
     expect(isPulled(PULL_SETTINGS as any, "products")).toBe(true);
     expect(isPulled(PULL_SETTINGS as any, "accounts")).toBe(false);
   });
+
+  it("writes back nothing while Get updates from Airtable is off, and is on by default", () => {
+    expect(pullTables({ ...PULL_SETTINGS, pull_enabled: false } as any)).toEqual([]);
+    expect(isPulled({ ...PULL_SETTINGS, pull_enabled: false } as any, "products")).toBe(false);
+    expect(pullTables({ ...PULL_SETTINGS, pull_enabled: true } as any)).toEqual(["products"]);
+  });
 });
 
 describe("cellValue", () => {

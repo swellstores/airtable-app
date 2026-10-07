@@ -1,10 +1,10 @@
 import { getAirtableSettings, isConfigured } from './lib/airtable';
-import { TIME_BUDGET_MS, latestPull, pullTable, pullTables } from './lib/pull';
+import { PULL_INTERVAL_MS, TIME_BUDGET_MS, latestPull, pullTable, pullTables } from './lib/pull';
 
 export const config: SwellConfig = {
   description: 'Write Airtable edits back to Swell',
   cron: {
-    schedule: '* * * * *',
+    schedule: '*/5 * * * *',
   },
 };
 
@@ -19,8 +19,8 @@ export default async function (req: SwellRequest) {
     return;
   }
 
-  // The first table changes every minute, so one busy table can't starve the others
-  const first = Math.floor(started / 60_000) % tables.length;
+  // The first table changes every run, so one busy table can't starve the others
+  const first = Math.floor(started / PULL_INTERVAL_MS) % tables.length;
   const order = [...tables.slice(first), ...tables.slice(0, first)];
 
   for (const id of order) {
