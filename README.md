@@ -158,8 +158,6 @@ When write-back is on for a table, live Swell `updated` events send only the ✎
 - **Pacing:** the app pauses about 220 ms between requests to stay under Airtable's limit of 5 requests per second per base.
 - **Table setup:** uses the Meta API: create table, create field, and update field (only to rename a wrong-type column; Airtable's API can't change a column's type).
 
-**App permissions** (`swell.json`): `[]`, i.e. full store access, the same as the Sendcloud and Fivetran apps. The app only reads orders, customers, products, variants, subscriptions, coupons, categories and its settings. It writes its own `syncs` and `pulls` collections, and, only with write-back on, the ✎ fields of products, variants, customers, coupons and categories plus product stock adjustments. Scoped permissions (`read_orders`, `read_coupons`, ...) were tried, but on an existing install Swell applied newly added permissions to only some requests for hours, so coupon, subscription and category reads failed at random.
-
 ## Limits
 
 - **Write-back covers only ✎ columns** of products, variants, customers, coupons and categories. Orders, line items and subscriptions are read-only in Airtable. Rows added or deleted in Airtable are not created or deleted in Swell.
