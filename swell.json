@@ -6,6 +6,8 @@
 	"version": "1.0.1",
 	"permissions": [],
 	"support_email": "support@swell.is",
+	"documentation_url": "https://developers.swell.is/app-guides/airtable",
+	"price_external": true,
 	"integrations": [
 		"airtable"
 	],
