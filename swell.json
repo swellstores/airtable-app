@@ -3,7 +3,7 @@
 	"id": "airtable",
 	"name": "Airtable",
 	"type": "integration",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"permissions": [],
 	"support_email": "support@swell.is",
 	"integrations": [
