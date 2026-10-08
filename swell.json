@@ -1,38 +1,38 @@
 {
-  "description": "Sync Swell orders, customers, products and more to Airtable",
-  "id": "airtable",
-  "name": "Airtable",
-  "type": "integration",
-  "version": "1.0.0",
-  "permissions": [],
-  "support_email": "support@swell.is",
-  "integrations": [
-    "airtable"
-  ],
-  "images": [
-    {
-      "id": "setup",
-      "title": "Tables set up in one click",
-      "description": "Add your Airtable token and base, then run Create tables & columns from the Actions menu to create every table and column.",
-      "image_src": "assets/images/1-setup.png"
-    },
-    {
-      "id": "syncs",
-      "title": "Backfill your history",
-      "description": "Send existing records to Airtable one collection at a time, or every synced collection in one click.",
-      "image_src": "assets/images/2-syncs.png"
-    },
-    {
-      "id": "write-back",
-      "title": "Edit in Airtable, update Swell",
-      "description": "Turn on Get updates from Airtable and pick the tables; edits to names, prices and stock reach Swell within about 5 minutes.",
-      "image_src": "assets/images/3-write-back.png"
-    },
-    {
-      "id": "pulls",
-      "title": "Every edit, accounted for",
-      "description": "Each check that finds Airtable edits is logged with the records updated in Swell and the edits rejected.",
-      "image_src": "assets/images/4-pulls.png"
-    }
-  ]
+	"description": "Sync Swell orders, customers, products and more to Airtable",
+	"id": "airtable",
+	"name": "Airtable",
+	"type": "integration",
+	"version": "1.0.0",
+	"permissions": [],
+	"support_email": "support@swell.is",
+	"integrations": [
+		"airtable"
+	],
+	"images": [
+		{
+			"id": "setup",
+			"title": "Tables set up in one click",
+			"description": "Add your Airtable token and base, then run Create tables & columns from the Actions menu to create every table and column.",
+			"image_src": "assets/images/1-setup.png"
+		},
+		{
+			"id": "syncs",
+			"title": "Backfill your history",
+			"description": "Send existing records to Airtable one collection at a time, or every synced collection in one click.",
+			"image_src": "assets/images/2-syncs.png"
+		},
+		{
+			"id": "write-back",
+			"title": "Edit in Airtable, update Swell",
+			"description": "Turn on Get updates from Airtable and pick the tables; edits to names, prices and stock reach Swell within about 5 minutes.",
+			"image_src": "assets/images/3-write-back.png"
+		},
+		{
+			"id": "pulls",
+			"title": "Every edit, accounted for",
+			"description": "Each check that finds Airtable edits is logged with the records updated in Swell and the edits rejected.",
+			"image_src": "assets/images/4-pulls.png"
+		}
+	]
 }
