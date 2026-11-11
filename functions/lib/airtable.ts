@@ -664,7 +664,7 @@ export async function checkConnection(settings: AirtableSettings): Promise<strin
       await sleep(throttle.ms);
       await airtableRequest(settings, 'GET', `${tablePath(settings, tableName(settings, id))}?maxRecords=1`);
     }
-    return `Connected. Tables ${names} are readable. Columns were not checked because the token has no schema.bases:read scope.`;
+    return `Connected to Airtable base ${settings.base_id?.trim()}. Tables ${names} are readable. Columns were not checked because the token has no schema.bases:read scope.`;
   }
 
   const problems: string[] = [];
@@ -687,7 +687,7 @@ export async function checkConnection(settings: AirtableSettings): Promise<strin
       422,
     );
   }
-  return `Connected. Tables ${names} have every column with the right type.`;
+  return `Connected to Airtable base ${settings.base_id?.trim()}. Tables ${names} have every column with the right type.`;
 }
 
 // Swell denies an app's newly granted collections on some requests for a while after its permissions change

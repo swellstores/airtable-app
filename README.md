@@ -64,7 +64,7 @@ Setup has three stages, in this order. Live sync starts after stage 2; until the
 ### 2. Create the tables
 
 1. On the app page (**Apps → Airtable**), open **Actions** and choose **Create tables & columns**, then **Create**. After a few seconds a message lists the tables and columns created. If it says it isn't finished, run it again.
-2. Optionally, choose **Actions → Connection test**. The message should say `Connected. Tables … have every column with the right type.` If it fails, the error says what's wrong.
+2. Optionally, choose **Actions → Connection test**. The message should say `Connected to Airtable base appXXXXXXXXXXXXXX. Tables … have every column with the right type.` If it fails, the error says what's wrong.
 
 From now on, every change in Swell appears in Airtable within a few seconds.
 

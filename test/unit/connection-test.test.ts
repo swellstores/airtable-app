@@ -25,7 +25,7 @@ describe("connection-test", () => {
   });
 
   it("returns the connection summary", async () => {
-    expect((await handler(request())).message).toMatch(/^Connected\. Tables Orders, Customers, Products/);
+    expect((await handler(request())).message).toMatch(/^Connected to Airtable base appTEST1234567890\. Tables Orders, Customers, Products/);
   });
 
   it("returns the problems found as an action error", async () => {

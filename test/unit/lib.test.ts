@@ -435,7 +435,7 @@ describe("checkConnection", () => {
 
   it("passes when every table and column exists with the right type", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(airtableFetch({ tables: tables() }));
-    expect(await checkConnection(SETTINGS as any)).toMatch(/Connected\. Tables Orders, Customers, Products have every column with the right type/);
+    expect(await checkConnection(SETTINGS as any)).toMatch(/Connected to Airtable base appTEST1234567890\. Tables Orders, Customers, Products have every column with the right type/);
   });
 
   it("lists missing tables, columns and wrong types", async () => {
