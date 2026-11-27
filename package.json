@@ -1,7 +1,7 @@
 {
   "description": "Sync Swell orders, customers and products to Airtable",
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "0.12.x",
+    "@cloudflare/vitest-pool-workers": "0.23.x",
     "@swell/app-types": "^1.2.0",
     "typescript": "^5.9.3",
     "vitest": "3.2.x"
