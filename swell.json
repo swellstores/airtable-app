@@ -1,5 +1,6 @@
 {
 	"description": "Sync Swell orders, customers, products and more to Airtable",
+	"repository_url": "https://github.com/swellstores/airtable-app",
 	"id": "airtable",
 	"name": "Airtable",
 	"type": "integration",

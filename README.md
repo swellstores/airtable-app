@@ -204,3 +204,7 @@ swell logs --type function -s record-events
 - **Adding a column:** add it to the table's `columns` in `functions/lib/tables.ts`. Run **Create tables & columns** to add it to existing bases, update the column list in this README, and extend the mapping tests.
 - **Changing a column's type:** change it in `functions/lib/tables.ts` and check `COMPATIBLE_TYPES` in `functions/lib/airtable.ts`. Existing bases then report the column as a wrong type. Tell merchants to run setup with **Replace columns with the wrong type**, then a backfill.
 - **Adding a table:** add an entry to `TABLES` in `functions/lib/tables.ts`, its events to `functions/record-events.ts`, a table setting and option to `settings/airtable.json`, the option to `models/syncs.json` and `content/syncs.json`, and the `read_<collection>` permission to `swell.json`. Child tables also need `parent`, `linkColumn` and `parentIdColumn`.
+
+## License
+
+MIT. See [LICENSE](LICENSE). Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
