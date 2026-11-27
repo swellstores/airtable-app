@@ -26,12 +26,13 @@ import {
   type Column,
 } from './airtable';
 
-// pull-edits runs every 5 minutes (its cron schedule)
-export const PULL_INTERVAL_MS = 5 * 60_000;
+// pull-edits runs every 15 minutes (its cron schedule)
+export const PULL_INTERVAL_MS = 15 * 60_000;
 // Stop starting new work after this long, well within the function's time limit
 export const TIME_BUDGET_MS = 7000;
-// A table's first check reads rows edited in this window; later checks read from the previous check with edits
-export const LOOKBACK_MS = 10 * 60_000;
+// A table's first check reads rows edited in this window; later checks read from the previous check with edits.
+// Twice the cron interval, so a table without a check yet never misses edits between runs.
+export const LOOKBACK_MS = 2 * PULL_INTERVAL_MS;
 // Rows edited this long before the previous check started are read again, covering clock skew
 export const OVERLAP_MS = 60_000;
 export const PULL_PAGE_SIZE = 100;

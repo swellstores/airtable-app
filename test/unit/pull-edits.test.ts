@@ -29,8 +29,8 @@ describe("pull-edits", () => {
     vi.restoreAllMocks();
   });
 
-  it("runs every 5 minutes", () => {
-    expect(config.cron?.schedule).toBe("*/5 * * * *");
+  it("runs every 15 minutes", () => {
+    expect(config.cron?.schedule).toBe("*/15 * * * *");
   });
 
   it("does nothing when write-back is off, the app is disabled or not configured", async () => {
@@ -63,7 +63,7 @@ describe("pull-edits", () => {
   it("starts with a different table each run", async () => {
     const firstTable = async (run: number) => {
       vi.useFakeTimers({ toFake: ["Date"] });
-      vi.setSystemTime(run * 5 * 60_000);
+      vi.setSystemTime(run * 15 * 60_000);
       fetchMock.mockClear();
       await handler(setup().req);
       vi.useRealTimers();

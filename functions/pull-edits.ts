@@ -4,7 +4,7 @@ import { PULL_INTERVAL_MS, TIME_BUDGET_MS, latestPull, pullTable, pullTables } f
 export const config: SwellConfig = {
   description: 'Write Airtable edits back to Swell',
   cron: {
-    schedule: '*/5 * * * *',
+    schedule: '*/15 * * * *',
   },
 };
 
