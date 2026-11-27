@@ -5,6 +5,10 @@ export const config: SwellConfig = {
   description: 'Write Airtable edits back to Swell',
   cron: {
     schedule: '*/15 * * * *',
+    // Skipped while write-back is off or the app has no access token
+    conditions: {
+      $settings: { airtable: { enabled: { $ne: false }, pull_enabled: { $ne: false }, access_token: { $empty: false } } },
+    },
   },
 };
 
